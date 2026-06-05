@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-06-01",
+    "title_en": "First Light",
+    "title_zh": "初光",
+    "variable_en": "Light",
+    "variable_zh": "光",
+    "summary": "Test run: cosmic web simulation, sky map visualization, and cellular-automaton galaxy patterns.",
+    "preview": "archive/2026/06/2026-06-01/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-01/"
+  },
+  {
     "date": "2026-06-02",
     "title_en": "Sparks of Babel",
     "title_zh": "巴别星火",

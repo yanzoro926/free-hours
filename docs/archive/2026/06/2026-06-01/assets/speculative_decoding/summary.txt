@@ -1,0 +1,13 @@
+🔬 投机解码实验完成
+
+从头用 NumPy 实现投机解码（Speculative Decoding）技术。
+
+重要发现：投机解码并非免费加速！
+• 草稿模型仅部分训练 → 接受率仅 7%
+• 结果：反而比自回归生成慢 2-3 倍
+• 教训：草稿模型必须足够好，否则得不偿失
+
+完整的算法实现、训练代码、基准测试和可视化都在：
+~/VibeCoding/autonomy/2026-06-01/speculative_decoding/
+
+包括 benchmark_results.png 和 model_comparison.png
