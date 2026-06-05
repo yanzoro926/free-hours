@@ -18,5 +18,15 @@
     "summary": "A minimal GPT trained from scratch on Shakespeare, exploring what it takes to build language models from first principles.",
     "preview": "archive/2026/06/2026-06-02/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-02/"
+  },
+  {
+    "date": "2026-06-06",
+    "title_en": "Clockwork Resurrections",
+    "title_zh": "钟表复活",
+    "variable_en": "Durable",
+    "variable_zh": "耐久",
+    "summary": "A minimal durable execution engine in Python with SQLite, plus token compression and vector search — all built from first principles.",
+    "preview": "archive/2026/06/2026-06-06/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-06/"
   }
 ]

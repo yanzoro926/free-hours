@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Durable Mini — viz_demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: #0d1117; color: #c9d1d9; padding: 2rem;
+  }
+  .header {
+    border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem;
+    margin-bottom: 1.5rem; background: #161b22;
+  }
+  .header h1 { font-size: 1.4rem; color: #58a6ff; }
+  .header .meta { color: #8b949e; margin-top: 0.5rem; font-size: 0.85rem; }
+  .stats { display: flex; gap: 1rem; margin: 1.5rem 0; }
+  .stat {
+    flex: 1; text-align: center; padding: 1rem;
+    border: 1px solid #30363d; border-radius: 6px; background: #161b22;
+  }
+  .stat .num { font-size: 2rem; font-weight: bold; }
+  .stat .label { color: #8b949e; font-size: 0.8rem; margin-top: 0.25rem; }
+  .ok .num { color: #3fb950; }
+  .fail .num { color: #f85149; }
+  .step {
+    border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem; background: #161b22;
+  }
+  .step.ok { border-left: 3px solid #3fb950; }
+  .step.fail { border-left: 3px solid #f85149; }
+  .step.run { border-left: 3px solid #d2991d; }
+  .step.pend { border-left: 3px solid #30363d; opacity: 0.6; }
+  .substep { margin: 0.25rem 0 0.25rem 2rem; font-size: 0.85rem; color: #8b949e; }
+  .substep.ok { color: #3fb950; }
+  .substep.fail { color: #f85149; }
+  .footer { margin-top: 2rem; color: #484f58; font-size: 0.8rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>⚙️ viz_demo</h1>
+  <div class="meta">
+    Instance: viz-001<br>
+    Status: <span style="color: #3fb950">COMPLETED</span>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat ok"><div class="num">7</div><div class="label">Completed</div></div>
+  <div class="stat fail"><div class="num">0</div><div class="label">Failed</div></div>
+  <div class="stat"><div class="num">7</div><div class="label">Total Steps</div></div>
+</div>
+<h2 style="color:#8b949e;margin-bottom:0.75rem;">Steps</h2>
+
+            <div class="step ok">
+              <div class="step-header">✅ <strong>load</strong></div>
+              
+            </div>
+            <div class="step pend">
+              <div class="step-header">⏳ <strong>process</strong> ⟐</div>
+              <div class="substep ok">✅ process[0]</div><div class="substep ok">✅ process[1]</div><div class="substep ok">✅ process[2]</div><div class="substep ok">✅ process[3]</div><div class="substep ok">✅ process[4]</div>
+            </div>
+            <div class="step ok">
+              <div class="step-header">✅ <strong>summarize</strong></div>
+              
+            </div>
+<div class="footer">
+  Durable Mini · Clockwork Resurrections / 钟表复活 · 2026-06-06 05:09
+</div>
+</body>
+</html>
