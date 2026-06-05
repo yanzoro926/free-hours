@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "date": "2026-06-02",
+    "title_en": "Sparks of Babel",
+    "title_zh": "巴别星火",
+    "variable_en": "Sparks",
+    "variable_zh": "星火",
+    "summary": "A minimal GPT trained from scratch on Shakespeare, exploring what it takes to build language models from first principles.",
+    "preview": "archive/2026/06/2026-06-02/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-02/"
+  }
+]
