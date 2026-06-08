@@ -35,7 +35,7 @@
     "title_zh": "双曲画布",
     "variable_en": "Curvature",
     "variable_zh": "曲率",
-    "summary": "Interactive hyperbolic geometry explorer — Poincaré disk canvas with tessellation, geodesic construction, and triangle defect measurement",
+    "summary": "An interactive hyperbolic geometry explorer — Poincare disk canvas, tessellation, geodesics, and triangle defect measurement.",
     "preview": "archive/2026/06/2026-06-07/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-07/"
   },
