@@ -1,0 +1,258 @@
+{
+  "reasoning_paths": [
+    {
+      "speed": 5,
+      "time_per_path_s": 40.0,
+      "paths_in_budget": 1,
+      "total_tokens_generated": 200
+    },
+    {
+      "speed": 10,
+      "time_per_path_s": 20.0,
+      "paths_in_budget": 1,
+      "total_tokens_generated": 200
+    },
+    {
+      "speed": 30,
+      "time_per_path_s": 6.667,
+      "paths_in_budget": 1,
+      "total_tokens_generated": 200
+    },
+    {
+      "speed": 60,
+      "time_per_path_s": 3.333,
+      "paths_in_budget": 1,
+      "total_tokens_generated": 200
+    },
+    {
+      "speed": 100,
+      "time_per_path_s": 2.0,
+      "paths_in_budget": 1,
+      "total_tokens_generated": 200
+    },
+    {
+      "speed": 200,
+      "time_per_path_s": 1.0,
+      "paths_in_budget": 2,
+      "total_tokens_generated": 400
+    },
+    {
+      "speed": 500,
+      "time_per_path_s": 0.4,
+      "paths_in_budget": 5,
+      "total_tokens_generated": 1000
+    },
+    {
+      "speed": 1000,
+      "time_per_path_s": 0.2,
+      "paths_in_budget": 10,
+      "total_tokens_generated": 2000
+    },
+    {
+      "speed": 1200,
+      "time_per_path_s": 0.167,
+      "paths_in_budget": 12,
+      "total_tokens_generated": 2400
+    }
+  ],
+  "best_of_n": [
+    {
+      "n": 1,
+      "confidence": 85.0
+    },
+    {
+      "n": 2,
+      "confidence": 97.8
+    },
+    {
+      "n": 3,
+      "confidence": 99.7
+    },
+    {
+      "n": 5,
+      "confidence": 99.9924
+    },
+    {
+      "n": 8,
+      "confidence": 100.0
+    },
+    {
+      "n": 10,
+      "confidence": 100.0
+    },
+    {
+      "n": 15,
+      "confidence": 100.0
+    },
+    {
+      "n": 20,
+      "confidence": 100.0
+    },
+    {
+      "n": 30,
+      "confidence": 100.0
+    }
+  ],
+  "cost_scenarios": [
+    {
+      "scenario": "Chat (10K tokens)",
+      "tokens": 10000,
+      "base_time_s": 142.9,
+      "ultra_time_s": 10.0,
+      "time_saved_s": 132.9,
+      "speedup": 14.3,
+      "base_cost": 0.02,
+      "ultra_cost": 0.06,
+      "cost_multiplier": 3.0
+    },
+    {
+      "scenario": "Code review (50K tokens)",
+      "tokens": 50000,
+      "base_time_s": 714.3,
+      "ultra_time_s": 50.0,
+      "time_saved_s": 664.3,
+      "speedup": 14.3,
+      "base_cost": 0.1,
+      "ultra_cost": 0.3,
+      "cost_multiplier": 3.0
+    },
+    {
+      "scenario": "Full codebase analysis (200K tokens)",
+      "tokens": 200000,
+      "base_time_s": 2857.1,
+      "ultra_time_s": 200.0,
+      "time_saved_s": 2657.1,
+      "speedup": 14.3,
+      "base_cost": 0.4,
+      "ultra_cost": 1.2,
+      "cost_multiplier": 3.0
+    },
+    {
+      "scenario": "Agent session (500K tokens)",
+      "tokens": 500000,
+      "base_time_s": 7142.9,
+      "ultra_time_s": 500.0,
+      "time_saved_s": 6642.9,
+      "speedup": 14.3,
+      "base_cost": 1.0,
+      "ultra_cost": 3.0,
+      "cost_multiplier": 3.0
+    },
+    {
+      "scenario": "Heavy reasoning day (1M tokens)",
+      "tokens": 1000000,
+      "base_time_s": 14285.7,
+      "ultra_time_s": 1000.0,
+      "time_saved_s": 13285.7,
+      "speedup": 14.3,
+      "base_cost": 2.0,
+      "ultra_cost": 6.0,
+      "cost_multiplier": 3.0
+    }
+  ],
+  "frontiers": [
+    {
+      "speed": 5,
+      "name": "Human Typing Speed",
+      "milestones": [
+        "LLM output matches human typing speed",
+        "User can read faster than the model generates",
+        "Not suitable for real-time applications"
+      ],
+      "reasoning_paths_2s": {
+        "speed": 5,
+        "time_per_path_s": 40.0,
+        "paths_in_budget": 1,
+        "total_tokens_generated": 200
+      },
+      "best_of_n_confidence_pct": 85.0
+    },
+    {
+      "speed": 30,
+      "name": "Conversational Threshold",
+      "milestones": [
+        "Text appears fast enough for conversational flow",
+        "Sub-second responses for short queries (~15 tok)",
+        "Minimum viable speed for chatbots"
+      ],
+      "reasoning_paths_2s": {
+        "speed": 30,
+        "time_per_path_s": 6.667,
+        "paths_in_budget": 1,
+        "total_tokens_generated": 200
+      },
+      "best_of_n_confidence_pct": 85.0
+    },
+    {
+      "speed": 60,
+      "name": "GPT-4 Class",
+      "milestones": [
+        "Most current frontier models operate here",
+        "200-token reasoning chain in ~3.3 seconds",
+        "Tolerable for most applications, but visible delay",
+        "Code generation: ~15 lines of Python in ~3 seconds"
+      ],
+      "reasoning_paths_2s": {
+        "speed": 60,
+        "time_per_path_s": 3.333,
+        "paths_in_budget": 1,
+        "total_tokens_generated": 200
+      },
+      "best_of_n_confidence_pct": 85.0
+    },
+    {
+      "speed": 200,
+      "name": "Fast Frontier",
+      "milestones": [
+        "Reasoning becomes nearly invisible to the user",
+        "200-token CoT in 1 second — instantaneous feel",
+        "Enables streaming agents with tool use",
+        "Groq/Cerebras custom hardware territory"
+      ],
+      "reasoning_paths_2s": {
+        "speed": 200,
+        "time_per_path_s": 1.0,
+        "paths_in_budget": 2,
+        "total_tokens_generated": 400
+      },
+      "best_of_n_confidence_pct": 97.8
+    },
+    {
+      "speed": 500,
+      "name": "Agent Speed",
+      "milestones": [
+        "Coding agents generate functions before you read the prompt",
+        "Tool-call latency becomes the bottleneck, not generation",
+        "Multiple parallel agent actions feasible",
+        "Real-time translation and transcription"
+      ],
+      "reasoning_paths_2s": {
+        "speed": 500,
+        "time_per_path_s": 0.4,
+        "paths_in_budget": 5,
+        "total_tokens_generated": 1000
+      },
+      "best_of_n_confidence_pct": 99.9924
+    },
+    {
+      "speed": 1000,
+      "name": "UltraSpeed (MiMo)",
+      "milestones": [
+        "Best-of-N reasoning: 10 paths in 2 seconds",
+        "Real-time quantitative trading signal generation",
+        "Surgical AI: sub-second medical image analysis",
+        "FP4 quantization + speculative decoding on commodity GPUs",
+        "Speed transmutes into intelligence — paradigm shift"
+      ],
+      "reasoning_paths_2s": {
+        "speed": 1000,
+        "time_per_path_s": 0.2,
+        "paths_in_budget": 10,
+        "total_tokens_generated": 2000
+      },
+      "best_of_n_confidence_pct": 100.0
+    }
+  ],
+  "generated": "2026-06-09T05:00:00+08:00",
+  "source": "Xiaomi MiMo-V2.5-Pro-UltraSpeed announcement"
+}

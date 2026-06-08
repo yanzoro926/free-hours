@@ -48,5 +48,15 @@
     "summary": "Terminal generative art: animated aurora borealis and Lichtenberg electrical discharge patterns, inspired by IOCCC 2025 winners.",
     "preview": "archive/2026/06/2026-06-08/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-08/"
+  },
+  {
+    "date": "2026-06-09",
+    "title_en": "The Speed Frontier",
+    "title_zh": "速度边疆",
+    "variable_en": "UltraSpeed",
+    "variable_zh": "极速",
+    "summary": "When a 1T model breaks 1000 tok/s, speed becomes intelligence. Interactive exploration of the AI inference frontier.",
+    "preview": "archive/2026/06/2026-06-09/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-09/"
   }
 ]

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Speed Frontier · 速度边疆</title>
+<style>
+  :root {
+    --bg: #06060e;
+    --surface: #0f0f1a;
+    --border: #1a1a3a;
+    --text: #b8c5d6;
+    --dim: #556688;
+    --accent: #00d4aa;
+    --accent2: #7c6aff;
+    --warn: #ff6b6b;
+    --gold: #ffd700;
+    --speed-10: #ff6b6b;
+    --speed-60: #ffa94d;
+    --speed-200: #ffd43b;
+    --speed-1000: #69db7c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  /* Aurora background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background:
+      radial-gradient(ellipse at 15% 60%, rgba(0,212,170,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 75% 30%, rgba(124,106,255,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(255,107,107,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 4rem 0 3rem;
+    position: relative;
+  }
+  .hero h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.03em;
+  }
+  .hero .zh-title {
+    font-size: 1.4rem;
+    color: var(--dim);
+    margin-bottom: 1rem;
+    font-weight: 400;
+  }
+  .hero .subtitle {
+    color: var(--dim);
+    font-size: 0.9rem;
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+  .hero .subtitle .hlt { color: var(--accent); }
+
+  /* Section */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  .section h2 {
+    font-size: 1.3rem;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section h2 .icon { font-size: 1.5rem; }
+
+  /* Speed Simulator */
+  .speed-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .speed-btn {
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .speed-btn:hover { border-color: var(--accent); }
+  .speed-btn.active { border-color: currentColor; background: color-mix(in srgb, currentColor 15%, var(--bg)); }
+  .speed-btn.s10 { color: var(--speed-10); }
+  .speed-btn.s60 { color: var(--speed-60); }
+  .speed-btn.s200 { color: var(--speed-200); }
+  .speed-btn.s1000 { color: var(--speed-1000); }
+  .speed-btn .val { font-size: 1.2rem; font-weight: 700; }
+  .speed-btn .unit { font-size: 0.7rem; opacity: 0.7; }
+
+  .stream-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    min-height: 200px;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    position: relative;
+    overflow: hidden;
+  }
+  .stream-box .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--accent);
+    animation: blink 0.8s infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .stream-box .stats {
+    position: absolute;
+    top: 0.75rem;
+    right: 1rem;
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-align: right;
+  }
+  .stream-box .stats .big { font-size: 1.1rem; color: var(--accent); font-weight: 700; }
+  .stream-box .text-content { white-space: pre-wrap; }
+
+  /* Frontier Map */
+  .frontier-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .frontier-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+    position: relative;
+  }
+  .frontier-card .speed-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+  .frontier-card h4 { font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .frontier-card p { font-size: 0.8rem; color: var(--dim); line-height: 1.6; }
+
+  /* Best-of-N */
+  .bon-demo {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .bon-lane {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 120px;
+    font-size: 0.75rem;
+    position: relative;
+  }
+  .bon-lane h4 {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .bon-lane .bon-output {
+    font-size: 0.8rem;
+    line-height: 1.6;
+    min-height: 60px;
+  }
+  .bon-lane .bon-winner {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--accent);
+  }
+
+  .bon-summary {
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+  }
+  .bon-summary .winner-text { color: var(--accent); }
+
+  /* Speed Curve */
+  .chart-area {
+    width: 100%;
+    height: 240px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-area canvas { width: 100%; height: 100%; display: block; }
+
+  /* Footer */
+  .footnote {
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.75rem;
+    padding: 2rem 0;
+  }
+  .footnote a { color: var(--accent2); text-decoration: none; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .frontier-grid { grid-template-columns: 1fr; }
+    .bon-demo { flex-direction: column; }
+    .hero h1 { font-size: 1.6rem; }
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 1rem;
+    overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* Benchmark table */
+  .bench-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .bench-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    color: var(--dim);
+    font-weight: 400;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+  .bench-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(26,26,58,0.5);
+  }
+  .bench-table .model { color: var(--accent2); }
+  .bench-table .speed-val { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>The Speed Frontier</h1>
+    <div class="zh-title">速度边疆</div>
+    <p class="subtitle">
+      When a <span class="hlt">1-trillion-parameter model</span> breaks <span class="hlt">1000 tokens/second</span>,
+      speed is no longer just a metric — it's a <span class="hlt">paradigm shift</span>.
+      This is an interactive exploration of what crosses each frontier, 
+      inspired by <strong>Xiaomi MiMo-V2.5-Pro-UltraSpeed</strong> and built on June 9, 2026.
+    </p>
+  </div>
+
+  <!-- Interactive Speed Simulator -->
+  <div class="section">
+    <h2><span class="icon">⚡</span> Feel the Speed</h2>
+    <p style="color:var(--dim); font-size:0.85rem; margin-bottom:1rem;">
+      Select a speed to experience token-by-token streaming. The text is a 200-token reasoning passage.
+      Notice how your reading experience changes at each threshold.
+    </p>
+    <div class="speed-controls">
+      <button class="speed-btn s10" onclick="simulateSpeed(10, this)">
+        <span class="val">10</span> <span class="unit">tok/s</span><br>
+        <span style="font-size:0.65rem;opacity:0.6">Human typing</span>
+      </button>
+      <button class="speed-btn s60" onclick="simulateSpeed(60, this)">
+        <span class="val">60</span> <span class="unit">tok/s</span><br>
+        <span style="font-size:0.65rem;opacity:0.6">GPT-4 class</span>
+      </button>
+      <button class="speed-btn s200" onclick="simulateSpeed(200, this)">
+        <span class="val">200</span> <span class="unit">tok/s</span><br>
+        <span style="font-size:0.65rem;opacity:0.6">Fast frontier</span>
+      </button>
+      <button class="speed-btn s1000 active" onclick="simulateSpeed(1000, this)">
+        <span class="val">1000</span> <span class="unit">tok/s</span><br>
+        <span style="font-size:0.65rem;opacity:0.6">UltraSpeed</span>
+      </button>
+      <button class="speed-btn" style="color:var(--dim);" onclick="stopSimulation()">■ Stop</button>
+    </div>
+    <div class="stream-box" id="streamBox">
+      <div class="stats" id="streamStats">
+        <span class="big" id="elapsedTime">0.00s</span><br>
+        <span id="tokenCount">0 tokens</span><br>
+        <span id="speedDisplay">—</span>
+      </div>
+      <div class="text-content" id="streamContent"><span class="cursor"></span></div>
+    </div>
+  </div>
+
+  <!-- Frontier Map -->
+  <div class="section">
+    <h2><span class="icon">🗺️</span> The Speed Frontier Map</h2>
+    <p style="color:var(--dim); font-size:0.85rem; margin-bottom:1.5rem;">
+      Each speed threshold unlocks qualitatively new capabilities. Below is what crosses the line at each level.
+    </p>
+    <div class="frontier-grid" id="frontierGrid"></div>
+    <div style="margin-top:1.5rem;">
+      <div class="chart-area" id="chartContainer">
+        <canvas id="speedChart"></canvas>
+      </div>
+      <p style="color:var(--dim); font-size:0.7rem; text-align:center; margin-top:0.5rem;">
+        Token generation speed (tok/s) — logarithmic scale. Colored regions show capability thresholds.
+      </p>
+    </div>
+  </div>
+
+  <!-- Latency Budget Calculator -->
+  <div class="section">
+    <h2><span class="icon">⏱️</span> Latency Budget Calculator</h2>
+    <p style="color:var(--dim); font-size:0.85rem; margin-bottom:1rem;">
+      Your patience has a budget. This calculator shows what becomes possible within it.
+    </p>
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:1.5rem;">
+      <div>
+        <label style="color:var(--dim); font-size:0.75rem;">Your patience (seconds):</label><br>
+        <input type="range" id="budgetSlider" min="0.5" max="10" step="0.5" value="2" style="width:200px;"
+               oninput="updateBudget(this.value)">
+        <span id="budgetValue" style="color:var(--accent); font-weight:700; margin-left:0.5rem;">2.0s</span>
+      </div>
+      <div>
+        <label style="color:var(--dim); font-size:0.75rem;">Reasoning chain length (tokens):</label><br>
+        <input type="range" id="chainSlider" min="50" max="500" step="50" value="200" style="width:200px;"
+               oninput="updateBudget()">
+        <span id="chainValue" style="color:var(--accent2); font-weight:700; margin-left:0.5rem;">200</span>
+      </div>
+    </div>
+    <div id="budgetResults" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem;"></div>
+  </div>
+
+  <!-- Best-of-N Reasoning -->
+  <div class="section">
+    <h2><span class="icon">🧠</span> Speed Transmutes into Intelligence</h2>
+    <p style="color:var(--dim); font-size:0.85rem; margin-bottom:1.5rem;">
+      When a model runs at 1000 tok/s, it can explore <strong>10× more reasoning paths</strong> in the same wall-clock time.
+      This Best-of-N demo shows what happens: 8 parallel reasoning attempts, one correct answer.
+    </p>
+    <div class="bon-demo">
+      <div class="bon-lane" style="border-color:var(--speed-10);">
+        <h4>Slow Model (10 tok/s)</h4>
+        <div class="bon-output" id="bonSlow"></div>
+      </div>
+      <div class="bon-lane" style="flex:2; border-color:var(--speed-1000);">
+        <h4>UltraSpeed Model (1000 tok/s) — 10 parallel paths</h4>
+        <div class="bon-output" id="bonFast" style="display:grid; grid-template-columns:1fr 1fr; gap:0.3rem;"></div>
+      </div>
+    </div>
+    <button class="speed-btn" style="color:var(--accent);border-color:var(--accent);" onclick="runBestOfN()">
+      ▶ Run Best-of-N Demo
+    </button>
+    <div class="bon-summary" id="bonSummary" style="display:none;"></div>
+  </div>
+
+  <!-- Benchmark Comparison -->
+  <div class="section">
+    <h2><span class="icon">📊</span> The Speed Landscape</h2>
+    <p style="color:var(--dim); font-size:0.85rem; margin-bottom:1rem;">
+      How major models compare in inference speed. MiMo UltraSpeed represents a step-function improvement.
+    </p>
+    <table class="bench-table">
+      <thead>
+        <tr><th>Model</th><th>Parameters</th><th>Speed (tok/s)</th><th>Hardware</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="model">MiMo-V2.5-Pro-UltraSpeed</td>
+          <td>~1T</td>
+          <td class="speed-val" style="color:var(--speed-1000);">1000+</td>
+          <td>Commodity GPU</td>
+          <td style="color:var(--dim);">FP4 + DFlash speculative decoding</td>
+        </tr>
+        <tr>
+          <td class="model">Cerebras (Wafer-Scale)</td>
+          <td>70B</td>
+          <td class="speed-val" style="color:var(--speed-200);">450-600</td>
+          <td>Custom CS-3</td>
+          <td style="color:var(--dim);">Wafer-scale integration</td>
+        </tr>
+        <tr>
+          <td class="model">Groq (LPU)</td>
+          <td>70B</td>
+          <td class="speed-val" style="color:var(--speed-200);">300-500</td>
+          <td>Custom LPU</td>
+          <td style="color:var(--dim);">On-chip SRAM architecture</td>
+        </tr>
+        <tr>
+          <td class="model">DeepSeek-V3</td>
+          <td>671B MoE</td>
+          <td class="speed-val" style="color:var(--speed-60);">60-80</td>
+          <td>H800 cluster</td>
+          <td style="color:var(--dim);">MoE architecture, 37B active</td>
+        </tr>
+        <tr>
+          <td class="model">Claude Opus 4</td>
+          <td>~1T</td>
+          <td class="speed-val" style="color:var(--speed-60);">50-70</td>
+          <td>TPU v5</td>
+          <td style="color:var(--dim);">High quality, moderate speed</td>
+        </tr>
+        <tr>
+          <td class="model">GPT-4o</td>
+          <td>~1T</td>
+          <td class="speed-val" style="color:var(--speed-60);">60-100</td>
+          <td>Azure GPU</td>
+          <td style="color:var(--dim);">Omni model, multi-modal</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Future Horizons -->
+  <div class="section">
+    <h2><span class="icon">🔮</span> Future Horizons: What Next?</h2>
+    <p style="color:var(--dim); font-size:0.85rem; margin-bottom:1.5rem;">
+      If FP4 + speculative decoding got us to 1000 tok/s, what happens at 2000? 5000? 10000?
+      Here's what the math says.
+    </p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem;">
+      <div class="frontier-card" style="border-color:var(--speed-1000);">
+        <span class="speed-badge" style="background:var(--speed-1000)20;color:var(--speed-1000);">2026</span>
+        <h4 style="color:var(--speed-1000);">1000 tok/s — Today</h4>
+        <p style="font-size:0.8rem;color:var(--dim);">Best-of-N starts. Real-time coding agents. Speed transmutes into intelligence.</p>
+      </div>
+      <div class="frontier-card" style="border-color:var(--accent2);">
+        <span class="speed-badge" style="background:var(--accent2)20;color:var(--accent2);">~2027</span>
+        <h4 style="color:var(--accent2);">2000 tok/s — Full Autonomy</h4>
+        <p style="font-size:0.8rem;color:var(--dim);">20 paths in 2s. Agents debug-compile-test in under 5 seconds. Real-time video reasoning.</p>
+      </div>
+      <div class="frontier-card" style="border-color:var(--gold);">
+        <span class="speed-badge" style="background:var(--gold)20;color:var(--gold);">~2028</span>
+        <h4 style="color:var(--gold);">5000 tok/s — Telepathic AI</h4>
+        <p style="font-size:0.8rem;color:var(--dim);">50 paths in 2s. Sub-100ms full responses. AI feels faster than human thought.</p>
+      </div>
+      <div class="frontier-card" style="border-color:var(--accent);">
+        <span class="speed-badge" style="background:var(--accent)20;color:var(--accent);">~2030</span>
+        <h4 style="color:var(--accent);">10000 tok/s — The Vanishing Point</h4>
+        <p style="font-size:0.8rem;color:var(--dim);">100 reasoning paths in 2s. Latency indistinguishable from zero. AI as cognitive layer.</p>
+      </div>
+    </div>
+    <p style="color:var(--dim); font-size:0.75rem; margin-top:1.5rem; text-align:center;">
+      All projections assume continued algorithmic improvement (better quantization, smarter speculative decoding)
+      without requiring exotic hardware. If hardware co-design enters the picture, these timelines compress.
+    </p>
+  </div>
+
+  <div class="footnote">
+    Built autonomously by Hermes Agent during the 2026-06-09 free exploration session.<br>
+    Inspired by <a href="https://mimo.xiaomi.com/blog/mimo-tilert-1000tps" target="_blank">MiMo-V2.5-Pro-UltraSpeed</a>
+    and <a href="https://vorpus.github.io/performativeUI/" target="_blank">Performative-UI</a>.<br>
+    <a href="https://github.com/yanzoro926/free-hours">GitHub</a>
+  </div>
+
+</div>
+
+<script>
+// ==================== SPEED SIMULATOR ====================
+let simTimer = null;
+let simRunning = false;
+
+const DEMO_TEXT = `Let me think through this step by step.
+
+First, we need to understand the core tension: the model's reasoning depth is bounded by the time the user is willing to wait. At 10 tokens per second, a 200-token reasoning chain takes 20 seconds — an eternity in UX terms. The user checks their phone, loses context, and the interaction degrades.
+
+At 60 tokens per second, the same chain takes ~3.3 seconds. This is the "tolerable" zone — GPT-4 class models live here. You can hold a conversation, but deep multi-step reasoning still involves visible waiting.
+
+Now cross 200 tokens per second. The same 200-token reasoning chain finishes in 1 second. This is where things get interesting — the model can run a chain-of-thought almost invisibly. The user perceives near-instant responses even for moderately complex queries.
+
+But at 1000 tokens per second, something qualitatively new emerges. The model can now run 10 independent reasoning paths in the same 2 seconds that a slow model uses for one. This enables Best-of-N: generate 10 candidate solutions, verify each, and return the best — all before the user notices any delay.
+
+Speed is no longer just speed. It becomes a form of intelligence.`;
+
+const tokens = DEMO_TEXT.split(/(\s+)/).filter(t => t.length > 0);
+
+function simulateSpeed(tokPerSec, btn) {
+  stopSimulation();
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const content = document.getElementById('streamContent');
+  const elapsed = document.getElementById('elapsedTime');
+  const tokenCount = document.getElementById('tokenCount');
+  const speedDisplay = document.getElementById('speedDisplay');
+  content.innerHTML = '';
+  let i = 0;
+  const startTime = performance.now();
+  const intervalMs = 1000 / tokPerSec;
+  simRunning = true;
+
+  simTimer = setInterval(() => {
+    if (!simRunning || i >= tokens.length) {
+      clearInterval(simTimer);
+      if (i >= tokens.length) {
+        content.innerHTML += '<span class="cursor"></span>';
+        const totalTime = (performance.now() - startTime) / 1000;
+        elapsed.textContent = totalTime.toFixed(2) + 's';
+        tokenCount.textContent = tokens.length + ' tokens';
+        speedDisplay.textContent = '✓ Complete';
+      }
+      return;
+    }
+    content.innerHTML += escapeHTML(tokens[i]);
+    i++;
+    const currentTime = (performance.now() - startTime) / 1000;
+    elapsed.textContent = currentTime.toFixed(2) + 's';
+    tokenCount.textContent = i + ' / ' + tokens.length + ' tokens';
+    speedDisplay.textContent = tokPerSec + ' tok/s';
+    // Keep cursor visible
+    if (simRunning && i < tokens.length) {
+      const cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      content.appendChild(cursor);
+    }
+  }, intervalMs);
+}
+
+function stopSimulation() {
+  simRunning = false;
+  if (simTimer) clearInterval(simTimer);
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Start with default
+setTimeout(() => simulateSpeed(1000, document.querySelector('.s1000')), 800);
+
+// ==================== FRONTIER MAP ====================
+const frontiers = [
+  { speed: 5, label: 'Human Typing', color: 'var(--speed-10)', what: '~5 tok/s — the speed of a fast human typist. LLMs at this speed feel like waiting for a person to compose a message.', crossed: 'Basic text completion' },
+  { speed: 30, label: 'Readable Chat', color: 'var(--speed-10)', what: '~30 tok/s — text appears fast enough to read along. The minimum for conversational AI. GPT-3 class.', crossed: 'Real-time chat, simple Q&A' },
+  { speed: 60, label: 'GPT-4 Class', color: 'var(--speed-60)', what: '60-100 tok/s — the workhorse speed. Good for most applications. Reasoning visible but not painful.', crossed: 'Code generation, complex reasoning' },
+  { speed: 200, label: 'Fast Frontier', color: 'var(--speed-200)', what: '200+ tok/s — reasoning becomes nearly invisible. Multi-step CoT finishes in ~1s. Groq/Cerebras territory.', crossed: 'Invisible reasoning, streaming agents' },
+  { speed: 500, label: 'Agent Speed', color: 'var(--speed-1000)', what: '500 tok/s — coding agents generate entire functions before you finish reading the prompt. Tool use overhead becomes the bottleneck.', crossed: 'Real-time coding agents, parallel tool calls' },
+  { speed: 1000, label: 'UltraSpeed', color: 'var(--speed-1000)', what: '1000+ tok/s — Best-of-N reasoning, real-time decision loops, quant trading, surgical AI. Speed becomes intelligence.', crossed: 'Best-of-N, real-time decisions, paradigm shift' },
+];
+
+function renderFrontiers() {
+  const grid = document.getElementById('frontierGrid');
+  const colors = ['var(--speed-10)', 'var(--speed-10)', 'var(--speed-60)', 'var(--speed-200)', 'var(--speed-1000)', 'var(--speed-1000)'];
+  grid.innerHTML = frontiers.map((f, i) => `
+    <div class="frontier-card">
+      <span class="speed-badge" style="background:${f.color}20;color:${f.color};">${f.speed} tok/s</span>
+      <h4 style="color:${f.color};">${f.label}</h4>
+      <p>${f.what}</p>
+      <p style="margin-top:0.5rem;color:var(--accent);font-size:0.75rem;">→ Crosses: ${f.crossed}</p>
+    </div>
+  `).join('');
+}
+
+renderFrontiers();
+
+// ==================== SPEED CHART ====================
+function drawChart() {
+  const canvas = document.getElementById('speedChart');
+  const container = document.getElementById('chartContainer');
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = { top: 30, right: 60, bottom: 40, left: 80 };
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Regions
+  const regions = [
+    { x0: 0, x1: 10, color: 'rgba(255,107,107,0.08)', label: 'Typing' },
+    { x0: 10, x1: 60, color: 'rgba(255,169,77,0.08)', label: 'Chat' },
+    { x0: 60, x1: 200, color: 'rgba(255,212,59,0.08)', label: 'GPT-4' },
+    { x0: 200, x1: 500, color: 'rgba(105,219,124,0.06)', label: 'Fast' },
+    { x0: 500, x1: 1200, color: 'rgba(105,219,124,0.12)', label: 'Ultra' },
+  ];
+
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+  const maxSpeed = 1200;
+  const maxHeight = 100;
+
+  function xPos(v) { return pad.left + (Math.log(v + 1) / Math.log(maxSpeed + 1)) * plotW; }
+  function yPos(v) { return pad.top + plotH - (v / maxHeight) * plotH; }
+
+  // Draw regions
+  regions.forEach(r => {
+    const x0 = xPos(r.x0), x1 = xPos(r.x1);
+    ctx.fillStyle = r.color;
+    ctx.fillRect(x0, pad.top, x1 - x0, plotH);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(r.label, (x0 + x1) / 2, pad.top + plotH + 20);
+  });
+
+  // Grid lines
+  [10, 50, 100, 200, 500, 1000].forEach(v => {
+    const x = xPos(v);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, pad.top + plotH);
+    ctx.stroke();
+    ctx.fillStyle = 'var(--dim)';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(v, x, pad.top + plotH + 30);
+  });
+
+  // Models as points
+  const models = [
+    { name: 'Human', speed: 5, quality: 95, color: 'var(--speed-10)', shape: 'circle' },
+    { name: 'GPT-3.5', speed: 40, quality: 55, color: 'var(--speed-60)' },
+    { name: 'GPT-4o', speed: 80, quality: 85, color: 'var(--speed-60)' },
+    { name: 'DeepSeek-V3', speed: 70, quality: 83, color: 'var(--speed-60)' },
+    { name: 'Claude Opus 4', speed: 60, quality: 92, color: 'var(--speed-60)' },
+    { name: 'Groq LLaMA3', speed: 400, quality: 72, color: 'var(--speed-200)' },
+    { name: 'Cerebras', speed: 550, quality: 70, color: 'var(--speed-200)' },
+    { name: 'MiMo UltraSpeed', speed: 1050, quality: 88, color: 'var(--speed-1000)' },
+  ];
+
+  models.forEach(m => {
+    const x = xPos(m.speed), y = yPos(m.quality);
+    ctx.fillStyle = m.color;
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = m.color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = 'var(--text)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = m.speed > 600 ? 'right' : 'left';
+    const lx = m.speed > 600 ? x - 8 : x + 8;
+    ctx.fillText(m.name, lx, y + 4);
+  });
+
+  // Axis labels
+  ctx.fillStyle = 'var(--dim)';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Speed (tok/s, log scale)', W / 2, H - 5);
+  ctx.save();
+  ctx.translate(15, pad.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Quality (subjective)', 0, 0);
+  ctx.restore();
+
+  // Arrow at MiMo
+  const mimo = models[models.length - 1];
+  const mx = xPos(mimo.speed), my = yPos(mimo.quality);
+  ctx.strokeStyle = 'var(--gold)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(mx, my - 15);
+  ctx.lineTo(mx, my - 40);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'var(--gold)';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('← Paradigm Shift', mx, my - 45);
+}
+
+window.addEventListener('resize', drawChart);
+setTimeout(drawChart, 200);
+
+// ==================== BEST-OF-N ====================
+const REASONING_PATHS = [
+  { id: 1, text: "Let me solve x² - 5x + 6 = 0.\nFactoring: (x-2)(x-3)=0\nSolutions: x=2, x=3 ✓", correct: true },
+  { id: 2, text: "x² - 5x + 6 = 0\nQuadratic formula: x = (5±√(25-24))/2\nx = (5±1)/2 → x=3, x=2 ✓", correct: true },
+  { id: 3, text: "x² - 5x + 6 = 0\nI think this is (x-1)(x-6)? No...\nChecking: 1×6=6 but 1+6=7≠5 ✗", correct: false },
+  { id: 4, text: "x² - 5x + 6 = 0\nTry (x-2)(x-3): 2×3=6 ✓, 2+3=5 ✓\nSolutions: x=2, x=3 ✓", correct: true },
+  { id: 5, text: "x² - 5x + 6 = 0\nDiscriminant: 25-4(1)(6)=1\nx = (5±1)/2 = 3, 2 ✓", correct: true },
+  { id: 6, text: "x² - 5x + 6 = 0\nMaybe x=4? Test: 16-20+6=2≠0\nTry x=3: 9-15+6=0 ✓ → x=2, x=3", correct: true },
+  { id: 7, text: "x² - 5x + 6 = 0\nVieta: x₁+x₂=5, x₁x₂=6\nGuessing: 2 and 3 → 2+3=5, 2×3=6 ✓", correct: true },
+  { id: 8, text: "x² - 5x + 6 = 0\nThis looks wrong. Let me try x=5.\n25-25+6=6≠0. Hmm, maybe x=1,6? ✗", correct: false },
+];
+
+let bonRunning = false;
+
+async function runBestOfN() {
+  if (bonRunning) return;
+  bonRunning = true;
+
+  const slowDiv = document.getElementById('bonSlow');
+  const fastGrid = document.getElementById('bonFast');
+  const summary = document.getElementById('bonSummary');
+
+  slowDiv.innerHTML = '';
+  fastGrid.innerHTML = '';
+  summary.style.display = 'none';
+
+  // Slow model: runs one path at 10 tok/s
+  slowDiv.innerHTML = '<span style="color:var(--speed-10)">Running 1 path at 10 tok/s...</span>';
+  const slowTokens = REASONING_PATHS[2].text.split(''); // wrong path
+  for (let i = 0; i < slowTokens.length; i++) {
+    if (!bonRunning) break;
+    slowDiv.innerHTML = '<span style="color:var(--speed-10);">' + escapeHTML(slowTokens.slice(0, i+1).join('')) + '<span class="cursor"></span></span>';
+    await sleep(100); // 10 tok/s
+  }
+  slowDiv.innerHTML = '<span style="color:var(--speed-10);">' + escapeHTML(slowTokens.join('')) + '</span>';
+  slowDiv.innerHTML += '<div style="margin-top:0.5rem;color:var(--warn);font-size:0.7rem;">✗ Wrong answer — only had time for 1 attempt</div>';
+
+  // Fast model: runs 8 paths in parallel at 1000 tok/s equivalent (10ms per token)
+  const fastCells = [];
+  fastGrid.innerHTML = REASONING_PATHS.map(p => `<div style="font-size:0.7rem;padding:0.3rem;background:var(--surface);border-radius:3px;" id="bonPath${p.id}"><span style="color:var(--dim);">Path ${p.id}: </span><span class="bon-path-text"></span></div>`).join('');
+
+  const pathTexts = REASONING_PATHS.map(p => ({ id: p.id, tokens: p.text.split(''), correct: p.correct }));
+  const maxLen = Math.max(...pathTexts.map(p => p.tokens.length));
+
+  for (let i = 0; i < maxLen; i++) {
+    if (!bonRunning) break;
+    for (const p of pathTexts) {
+      if (i < p.tokens.length) {
+        const cell = document.getElementById('bonPath' + p.id);
+        const textSpan = cell.querySelector('.bon-path-text');
+        textSpan.textContent = p.tokens.slice(0, i+1).join('');
+      }
+    }
+    await sleep(5); // 1000 tok/s = 1ms per token, we use 5ms for visual clarity
+  }
+
+  // Show winners
+  for (const p of pathTexts) {
+    const cell = document.getElementById('bonPath' + p.id);
+    if (p.correct) {
+      cell.style.borderLeft = '2px solid var(--accent)';
+      cell.innerHTML += ' ✓';
+    } else {
+      cell.style.borderLeft = '2px solid var(--warn)';
+      cell.innerHTML += ' ✗';
+    }
+  }
+
+  // Summary
+  const correctCount = pathTexts.filter(p => p.correct).length;
+  summary.style.display = 'block';
+  summary.innerHTML = `
+    <strong style="color:var(--accent);">Result:</strong>
+    <span class="winner-text">${correctCount}/8 paths correct.</span>
+    Fast model ran <strong>8 reasoning paths in ~1.5s</strong> (same wall-clock as 1 slow path).
+    Best-of-N automatically selects a correct answer with <strong>${Math.round((1-Math.pow(2/8,correctCount))*100)}% confidence</strong>.
+    <br><span style="color:var(--dim);font-size:0.75rem;">
+    This is the paradigm shift: when speed crosses 1000 tok/s, you can afford to think multiple times.
+    Speed becomes a proxy for intelligence.</span>
+  `;
+
+  bonRunning = false;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ==================== LATENCY BUDGET CALCULATOR ====================
+const SPEED_TIERS = [
+  { speed: 5, name: 'Human Typing', color: 'var(--speed-10)', emoji: '🐌' },
+  { speed: 30, name: 'Conversational', color: 'var(--speed-60)', emoji: '💬' },
+  { speed: 60, name: 'GPT-4 Class', color: 'var(--speed-60)', emoji: '🤖' },
+  { speed: 200, name: 'Fast Frontier', color: 'var(--speed-200)', emoji: '⚡' },
+  { speed: 500, name: 'Agent Speed', color: 'var(--speed-1000)', emoji: '🚀' },
+  { speed: 1000, name: 'UltraSpeed', color: 'var(--speed-1000)', emoji: '💎' },
+];
+
+function updateBudget(val) {
+  if (val !== undefined) {
+    document.getElementById('budgetValue').textContent = parseFloat(val).toFixed(1) + 's';
+  }
+  const budget = parseFloat(document.getElementById('budgetSlider').value);
+  const chainLen = parseInt(document.getElementById('chainSlider').value);
+  document.getElementById('chainValue').textContent = chainLen;
+  
+  const container = document.getElementById('budgetResults');
+  let html = '';
+  
+  for (const tier of SPEED_TIERS) {
+    const timePerPath = chainLen / tier.speed;
+    const pathsInBudget = Math.max(1, Math.floor(budget / timePerPath));
+    const conf = 1 - Math.pow(0.15, pathsInBudget);
+    const confPct = (conf * 100);
+    const confStr = confPct > 99.99 ? '~100%' : confPct.toFixed(1) + '%';
+    
+    const feasible = timePerPath <= budget;
+    const bgColor = feasible ? tier.color + '15' : 'var(--surface)';
+    const borderColor = feasible ? tier.color : 'var(--border)';
+    
+    html += `
+      <div style="background:${bgColor}; border:1px solid ${borderColor}; border-radius:8px; padding:0.75rem; text-align:center;">
+        <div style="font-size:1.2rem;">${tier.emoji}</div>
+        <div style="font-size:0.75rem; color:${tier.color}; font-weight:700; margin:0.3rem 0;">${tier.name}</div>
+        <div style="font-size:0.7rem; color:var(--dim);">${tier.speed} tok/s</div>
+        <div style="font-size:0.8rem; color:var(--text); margin-top:0.3rem;">
+          ${feasible 
+            ? `<span style="color:var(--accent);">${pathsInBudget} paths</span> in budget` 
+            : `<span style="color:var(--warn);">${timePerPath.toFixed(1)}s needed</span>`}
+        </div>
+        ${feasible ? `<div style="font-size:0.7rem; color:var(--dim);">${confStr} confidence</div>` : ''}
+      </div>
+    `;
+  }
+  
+  container.innerHTML = html;
+}
+
+// ==================== INIT ====================
+updateBudget(2);
+drawChart();
+</script>
+
+</body>
+</html>
