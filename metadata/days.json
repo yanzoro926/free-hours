@@ -25,7 +25,7 @@
     "title_zh": "钟表复活",
     "variable_en": "Durable",
     "variable_zh": "耐久",
-    "summary": "A minimal durable execution engine in Python with SQLite, plus token compression and vector search — all built from first principles.",
+    "summary": "A minimal durable execution engine in Python with SQLite, plus Token Whisperer LLM prompt compressor.",
     "preview": "archive/2026/06/2026-06-06/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-06/"
   },
