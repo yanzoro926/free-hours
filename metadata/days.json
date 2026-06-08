@@ -43,9 +43,9 @@
     "date": "2026-06-08",
     "title_en": "Auroral Codex",
     "title_zh": "极光手稿",
-    "variable_en": "IOCCC 2025 → Terminal Art",
-    "variable_zh": "IOCCC 2025 → 终端艺术",
-    "summary": "Terminal generative art: aurora borealis animation, Lichtenberg discharge patterns, and synthetic ocean waves — inspired by IOCCC 2025 winners",
+    "variable_en": "IOCCC",
+    "variable_zh": "IOCCC",
+    "summary": "Terminal generative art: animated aurora borealis and Lichtenberg electrical discharge patterns, inspired by IOCCC 2025 winners.",
     "preview": "archive/2026/06/2026-06-08/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-08/"
   }
