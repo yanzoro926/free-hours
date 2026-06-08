@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three Views of Infinity — Hyperbolic Model Comparison</title>
+<style>
+  :root {
+    --bg: #0a0a14; --surface: #12122a; --text: #e0e0f0;
+    --accent: #c4a0ff; --accent2: #60d0ff; --gold: #f0c060;
+    --danger: #ff6070; --border: #2a2a44;
+  }
+  * { margin:0; padding:0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  #header {
+    text-align: center; padding: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  #header h1 {
+    font-size: 1.2em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  #header p { font-size: 0.72em; color: #888; margin-top: 4px; }
+  #grid {
+    flex: 1; display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2px; background: var(--border);
+  }
+  .model-panel {
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+  }
+  .model-panel label {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 0.75em; color: var(--accent2);
+    background: var(--surface); padding: 4px 12px;
+    border-radius: 12px; border: 1px solid var(--border);
+  }
+  canvas { display: block; }
+  #footer {
+    text-align: center; padding: 8px; font-size: 0.68em;
+    color: #666; border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Three Views of Infinity / 无限三面</h1>
+  <p>Same {3,7} hyperbolic tessellation — three mathematical projections</p>
+</div>
+
+<div id="grid">
+  <div class="model-panel" id="panel-poincare">
+    <label>Poincaré Disk</label>
+    <canvas id="c-poincare"></canvas>
+  </div>
+  <div class="model-panel" id="panel-klein">
+    <label>Klein (Beltrami) Disk</label>
+    <canvas id="c-klein"></canvas>
+  </div>
+  <div class="model-panel" id="panel-halfplane">
+    <label>Upper Half-Plane</label>
+    <canvas id="c-halfplane"></canvas>
+  </div>
+</div>
+
+<div id="footer">
+  Poincaré: angles preserved, geodesics are arcs · Klein: geodesics are straight lines, angles distorted · Half-Plane: conformal, boundary is a line
+</div>
+
+<script>
+// ============================================================
+// SHARED TESSELLATION GENERATOR
+// ============================================================
+
+function generateTessellation(p, q, maxDepth = 5) {
+  const edges = [];
+  const centralAngle = 2 * Math.PI / p;
+  const cosR = Math.cos(Math.PI / p) / Math.sin(Math.PI / q);
+  if (cosR < 1) return edges;
+  const r = Math.acosh(cosR);
+  const euclideanR = Math.tanh(r / 2);
+
+  const vertices = [];
+  for (let i = 0; i < p; i++) {
+    const angle = centralAngle * i - Math.PI / 2;
+    vertices.push({ x: euclideanR * Math.cos(angle), y: euclideanR * Math.sin(angle) });
+  }
+
+  const visited = new Set();
+  const queue = [];
+
+  function edgeKey(a, b) {
+    const eps = 0.001;
+    const ax = Math.round(a.x/eps)*eps, ay = Math.round(a.y/eps)*eps;
+    const bx = Math.round(b.x/eps)*eps, by = Math.round(b.y/eps)*eps;
+    if (ax < bx || (ax === bx && ay < by)) return `${ax},${ay}-${bx},${by}`;
+    return `${bx},${by}-${ax},${ay}`;
+  }
+
+  function computeGeodesicCenter(p1, p2) {
+    const pn2 = p1.x*p1.x + p1.y*p1.y;
+    const qn2 = p2.x*p2.x + p2.y*p2.y;
+    const cross = p1.x*p2.y - p1.y*p2.x;
+    if (Math.abs(cross) < 1e-10) return null;
+    const denom = 2 * cross;
+    const cx = (p2.y * (pn2 + 1) - p1.y * (qn2 + 1)) / denom;
+    const cy = (p1.x * (qn2 + 1) - p2.x * (pn2 + 1)) / denom;
+    const r2 = cx*cx + cy*cy - 1;
+    if (r2 <= 0) return null;
+    return { x: cx, y: cy, r: Math.sqrt(r2) };
+  }
+
+  function reflectAcrossEdge(pt, a, b) {
+    const geo = computeGeodesicCenter(a, b);
+    if (!geo) {
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const len2 = dx*dx+dy*dy;
+      if (len2 < 1e-10) return pt;
+      const t = ((pt.x-a.x)*dx + (pt.y-a.y)*dy) / len2;
+      const px = a.x + t*dx, py = a.y + t*dy;
+      return { x: 2*px - pt.x, y: 2*py - pt.y };
+    }
+    const dx = pt.x - geo.x, dy = pt.y - geo.y;
+    const d2 = dx*dx + dy*dy;
+    if (d2 < 1e-10) return pt;
+    const f = geo.r * geo.r / d2;
+    return { x: geo.x + dx*f, y: geo.y + dy*f };
+  }
+
+  function inDisk(pt) { return pt.x*pt.x + pt.y*pt.y < 0.99; }
+
+  function addPolygon(verts, depth) {
+    if (edges.length > 5000 || depth > maxDepth) return;
+    for (let i = 0; i < verts.length; i++) {
+      const j = (i+1) % verts.length;
+      const key = edgeKey(verts[i], verts[j]);
+      if (!visited.has(key)) {
+        visited.add(key);
+        edges.push({ a: {x:verts[i].x, y:verts[i].y}, b: {x:verts[j].x, y:verts[j].y} });
+      }
+    }
+    if (depth < maxDepth) {
+      for (let i = 0; i < verts.length; i++) {
+        const j = (i+1) % verts.length;
+        const newVerts = verts.map(v => reflectAcrossEdge(v, verts[i], verts[j]));
+        if (newVerts.every(v => inDisk({x:v.x+0.02, y:v.y+0.02}))) {
+          queue.push({ verts: newVerts, depth: depth+1 });
+        }
+      }
+    }
+  }
+
+  addPolygon(vertices, 0);
+  let processed = 0;
+  while (queue.length > 0 && edges.length < 5000 && processed < 4000) {
+    const item = queue.shift();
+    addPolygon(item.verts, item.depth);
+    processed++;
+  }
+
+  return edges;
+}
+
+// ============================================================
+// MODEL TRANSFORMATIONS
+// ============================================================
+
+// Poincaré → Klein: (x, y) → (2x/(1+r²), 2y/(1+r²))
+function poincareToKlein(p) {
+  const r2 = p.x*p.x + p.y*p.y;
+  const denom = 1 + r2;
+  return { x: 2*p.x/denom, y: 2*p.y/denom };
+}
+
+// Poincaré → Half-Plane: z → (z + i) / (iz + 1)  [Cayley transform]
+function poincareToHalfPlane(p) {
+  // In the Poincaré disk, the Cayley transform maps to the upper half-plane
+  // w = i*(1+z)/(1-z) (variant)
+  const denom = (1-p.x)*(1-p.x) + p.y*p.y;
+  if (denom < 1e-10) return { x: 0, y: 100 };
+  const wx = 2*p.y / denom;
+  const wy = (1 - p.x*p.x - p.y*p.y) / denom;
+  return { x: wx, y: Math.max(0.001, wy) };
+}
+
+// ============================================================
+// RENDERER: POINCARE DISK
+// ============================================================
+
+function renderPoincare(canvas, edges) {
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const cx = w/2, cy = h/2, scale = w * 0.44;
+
+  ctx.fillStyle = '#0a0a14'; ctx.fillRect(0, 0, w, h);
+  ctx.beginPath(); ctx.arc(cx, cy, scale, 0, 2*Math.PI);
+  ctx.fillStyle = '#0d0d20'; ctx.fill();
+  ctx.strokeStyle = '#2a2a50'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, scale, 0, 2*Math.PI); ctx.clip();
+
+  for (const edge of edges) {
+    const cross = edge.a.x*edge.b.y - edge.a.y*edge.b.x;
+    if (Math.abs(cross) < 1e-10) {
+      const sx = edge.a.x*scale + cx, sy = edge.a.y*scale + cy;
+      const ex = edge.b.x*scale + cx, ey = edge.b.y*scale + cy;
+      ctx.strokeStyle = 'rgba(96,208,255,0.25)'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    } else {
+      const pn2 = edge.a.x*edge.a.x + edge.a.y*edge.a.y;
+      const qn2 = edge.b.x*edge.b.x + edge.b.y*edge.b.y;
+      const denom = 2*cross;
+      const gx = (edge.b.y*(pn2+1) - edge.a.y*(qn2+1)) / denom;
+      const gy = (edge.a.x*(qn2+1) - edge.b.x*(pn2+1)) / denom;
+      const r = Math.sqrt(gx*gx + gy*gy - 1);
+      if (r > 0 && isFinite(r)) {
+        let a1 = Math.atan2(edge.a.y-gy, edge.a.x-gx);
+        let a2 = Math.atan2(edge.b.y-gy, edge.b.x-gx);
+        if (a2 < a1) a2 += 2*Math.PI;
+        if (a2 - a1 > Math.PI) [a1, a2] = [a2, a1+2*Math.PI];
+        ctx.strokeStyle = 'rgba(96,208,255,0.25)'; ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.arc(gx*scale+cx, gy*scale+cy, r*scale, a1, a2); ctx.stroke();
+      }
+    }
+  }
+
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx, cy, scale, 0, 2*Math.PI);
+  ctx.strokeStyle = '#2a2a50'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+// ============================================================
+// RENDERER: KLEIN DISK
+// ============================================================
+
+function renderKlein(canvas, edges) {
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const cx = w/2, cy = h/2, scale = w * 0.44;
+
+  ctx.fillStyle = '#0a0a14'; ctx.fillRect(0, 0, w, h);
+  ctx.beginPath(); ctx.arc(cx, cy, scale, 0, 2*Math.PI);
+  ctx.fillStyle = '#0d0d20'; ctx.fill();
+  ctx.strokeStyle = '#2a2a50'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, scale, 0, 2*Math.PI); ctx.clip();
+
+  for (const edge of edges) {
+    const ka = poincareToKlein(edge.a);
+    const kb = poincareToKlein(edge.b);
+    // In Klein model, geodesics are straight lines
+    const sx = ka.x*scale + cx, sy = ka.y*scale + cy;
+    const ex = kb.x*scale + cx, ey = kb.y*scale + cy;
+    ctx.strokeStyle = 'rgba(240,192,96,0.3)'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+
+    // Draw chord endpoints at boundary
+    // Extend to boundary
+    const dx = kb.x - ka.x, dy = kb.y - ka.y;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    if (len > 1e-10) {
+      // Find intersection with unit circle
+      const A = dx*dx+dy*dy;
+      const B = 2*(ka.x*dx+ka.y*dy);
+      const C = ka.x*ka.x+ka.y*ka.y-1;
+      const disc = B*B-4*A*C;
+      if (disc > 0) {
+        const t1 = (-B+Math.sqrt(disc))/(2*A);
+        const t2 = (-B-Math.sqrt(disc))/(2*A);
+        if (Math.abs(t1) < 3 && Math.abs(t2) < 3) {
+          const px1 = (ka.x+t1*dx)*scale + cx;
+          const py1 = (ka.y+t1*dy)*scale + cy;
+          const px2 = (ka.x+t2*dx)*scale + cx;
+          const py2 = (ka.y+t2*dy)*scale + cy;
+          ctx.strokeStyle = 'rgba(240,192,96,0.12)'; ctx.lineWidth = 0.4;
+          ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2); ctx.stroke();
+        }
+      }
+    }
+  }
+
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx, cy, scale, 0, 2*Math.PI);
+  ctx.strokeStyle = '#2a2a50'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+// ============================================================
+// RENDERER: UPPER HALF-PLANE
+// ============================================================
+
+function renderHalfPlane(canvas, edges) {
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const margin = 30;
+
+  ctx.fillStyle = '#0a0a14'; ctx.fillRect(0, 0, w, h);
+
+  // Viewport: x in [-4, 4], y in [0.05, 8]
+  const xMin = -4, xMax = 4, yMin = 0.05, yMax = 8;
+  const toScreenX = (x) => margin + (x - xMin) / (xMax - xMin) * (w - 2*margin);
+  const toScreenY = (y) => margin + (1 - (y - yMin) / (yMax - yMin)) * (h - 2*margin);
+
+  // Draw the real axis (boundary)
+  ctx.strokeStyle = '#2a2a50'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(margin, toScreenY(yMin)); ctx.lineTo(w-margin, toScreenY(yMin)); ctx.stroke();
+
+  // Draw some horizontal reference lines
+  for (let y = 0.1; y <= 8; y *= 2) {
+    const sy = toScreenY(y);
+    ctx.strokeStyle = 'rgba(42,42,68,0.3)'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(margin, sy); ctx.lineTo(w-margin, sy); ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(margin, toScreenY(yMax), w-2*margin, toScreenY(yMin)-toScreenY(yMax)); ctx.clip();
+
+  for (const edge of edges) {
+    const ha = poincareToHalfPlane(edge.a);
+    const hb = poincareToHalfPlane(edge.b);
+
+    // In half-plane, geodesics are semicircles centered on real axis or vertical lines
+    if (Math.abs(ha.x - hb.x) < 1e-6) {
+      // Vertical line
+      const sx = toScreenX(ha.x);
+      const sy1 = toScreenY(ha.y);
+      const sy2 = toScreenY(hb.y);
+      ctx.strokeStyle = 'rgba(196,160,255,0.3)'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(sx, sy1); ctx.lineTo(sx, sy2); ctx.stroke();
+    } else {
+      // Semicircle centered on real axis
+      // Center: ( (|a|² - |b|²) / (2(a_x - b_x)), 0 )
+      const aNorm2 = ha.x*ha.x + ha.y*ha.y;
+      const bNorm2 = hb.x*hb.x + hb.y*hb.y;
+      const centerX = (aNorm2 - bNorm2) / (2*(ha.x - hb.x));
+      const radius = Math.sqrt((ha.x-centerX)*(ha.x-centerX) + ha.y*ha.y);
+
+      if (radius > 0.01 && isFinite(radius)) {
+        const scx = toScreenX(centerX);
+        const scy = toScreenY(0);
+        const sr = radius / (xMax-xMin) * (w-2*margin);
+
+        const a1 = Math.atan2(toScreenY(0)-toScreenY(ha.y), toScreenX(ha.x)-scx);
+        const a2 = Math.atan2(toScreenY(0)-toScreenY(hb.y), toScreenX(hb.x)-scx);
+
+        ctx.strokeStyle = 'rgba(196,160,255,0.3)'; ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        if (Math.abs(a2-a1) > Math.PI) {
+          ctx.arc(scx, scy, sr, Math.max(a1, a2), Math.min(a1, a2)+2*Math.PI);
+        } else {
+          ctx.arc(scx, scy, sr, Math.min(a1, a2), Math.max(a1, a2));
+        }
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.restore();
+
+  // Redraw boundary
+  ctx.strokeStyle = '#2a2a50'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(margin, toScreenY(yMin)); ctx.lineTo(w-margin, toScreenY(yMin)); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#555'; ctx.font = '8px monospace';
+  ctx.fillText('0', margin-10, toScreenY(yMin)+12);
+  ctx.fillText('ℝ', w-margin+4, toScreenY(yMin)+4);
+}
+
+// ============================================================
+// MAIN
+// ============================================================
+
+function resizeAll() {
+  const grid = document.getElementById('grid');
+  const panelW = grid.clientWidth / 3;
+  const panelH = grid.clientHeight;
+
+  ['c-poincare', 'c-klein', 'c-halfplane'].forEach(id => {
+    const c = document.getElementById(id);
+    const size = Math.min(panelW, panelH) - 40;
+    c.width = size;
+    c.height = size;
+    if (id === 'c-halfplane') {
+      c.height = Math.min(panelH - 20, panelW * 0.85);
+      c.width = Math.min(panelW - 20, panelH * 1.2);
+    }
+  });
+}
+
+function renderAll(edges) {
+  renderPoincare(document.getElementById('c-poincare'), edges);
+  renderKlein(document.getElementById('c-klein'), edges);
+  renderHalfPlane(document.getElementById('c-halfplane'), edges);
+}
+
+// Generate and render
+const tessEdges = generateTessellation(3, 7, 5);
+resizeAll();
+renderAll(tessEdges);
+
+window.addEventListener('resize', () => {
+  resizeAll();
+  renderAll(tessEdges);
+});
+</script>
+</body>
+</html>

@@ -30,6 +30,16 @@
     "archive_url": "archive/2026/06/2026-06-06/"
   },
   {
+    "date": "2026-06-07",
+    "title_en": "Curvature of Thought",
+    "title_zh": "双曲画布",
+    "variable_en": "Curvature",
+    "variable_zh": "曲率",
+    "summary": "Interactive hyperbolic geometry explorer — Poincaré disk canvas with tessellation, geodesic construction, and triangle defect measurement",
+    "preview": "archive/2026/06/2026-06-07/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-07/"
+  },
+  {
     "date": "2026-06-08",
     "title_en": "Auroral Codex",
     "title_zh": "极光手稿",

@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curvature of Thought — Hyperbolic Canvas</title>
+<style>
+  :root {
+    --bg: #0a0a14;
+    --surface: #12122a;
+    --text: #e0e0f0;
+    --accent: #c4a0ff;
+    --accent2: #60d0ff;
+    --gold: #f0c060;
+    --danger: #ff6070;
+    --border: #2a2a44;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+  }
+  #sidebar {
+    width: 340px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  #sidebar h1 {
+    font-size: 1.4em;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #sidebar h2 {
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: -8px;
+  }
+  #main-canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  canvas {
+    display: block;
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(196,160,255,0.15), 0 0 120px rgba(96,208,255,0.08);
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82em;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: rgba(255,255,255,0.08); border-color: #555; }
+  .btn.active { background: var(--accent); color: #0a0a14; border-color: var(--accent); font-weight: 600; }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: rgba(255,96,112,0.15); }
+  .info-panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.8em;
+    line-height: 1.5;
+  }
+  .info-panel .label { color: #888; font-size: 0.75em; text-transform: uppercase; }
+  .info-panel .value { color: var(--accent2); font-family: 'Courier New', monospace; }
+  .tessellation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .tessellation-grid .btn { font-size: 0.72em; padding: 4px 8px; text-align: center; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.72em;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+  #status {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75em;
+    color: #666;
+    pointer-events: none;
+  }
+  #tooltip {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.78em;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+    z-index: 20;
+  }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #sidebar { width: 100%; max-height: 40vh; flex-shrink: 0; }
+    #main-canvas-wrap { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>Curvature of Thought</h1>
+  <h2>双曲画布 · Hyperbolic Canvas</h2>
+
+  <div class="toolbar">
+    <button class="btn active" data-tool="navigate" id="btn-nav">Navigate</button>
+    <button class="btn" data-tool="point" id="btn-pt">Point</button>
+    <button class="btn" data-tool="geodesic" id="btn-geo">Geodesic</button>
+    <button class="btn" data-tool="triangle" id="btn-tri">Triangle</button>
+    <button class="btn" data-tool="measure" id="btn-meas">Measure</button>
+  </div>
+
+  <div>
+    <h2>Tessellations</h2>
+    <div class="tessellation-grid">
+      <button class="btn" data-tess="none">None</button>
+      <button class="btn" data-tess="37">{3,7}</button>
+      <button class="btn" data-tess="38">{3,8}</button>
+      <button class="btn" data-tess="47">{4,7}</button>
+      <button class="btn" data-tess="58">{5,8}</button>
+      <button class="btn" data-tess="73">{7,3}</button>
+      <button class="btn" data-tess="74">{7,4}</button>
+      <button class="btn" data-tess="83">{8,3}</button>
+    </div>
+  </div>
+
+  <div class="info-panel" id="info">
+    <div><span class="label">Cursor:</span> <span class="value" id="info-pos">—</span></div>
+    <div><span class="label">Hyperbolic Dist:</span> <span class="value" id="info-dist">—</span></div>
+    <div><span class="label">Euclidean Dist:</span> <span class="value" id="info-euc">—</span></div>
+    <div id="info-triangle" style="display:none">
+      <div><span class="label">Angle Sum:</span> <span class="value" id="info-angles">—</span></div>
+      <div><span class="label">Area (defect):</span> <span class="value" id="info-area">—</span></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-swatch" style="background:var(--accent2)"></span> Geodesics</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:var(--gold)"></span> Points</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:var(--danger)"></span> Triangle</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:rgba(255,255,255,0.15)"></span> Tess.</div>
+  </div>
+
+  <div class="toolbar" style="margin-top:auto">
+    <button class="btn danger" id="btn-clear">Clear All</button>
+    <button class="btn" id="btn-export">Export PNG</button>
+    <button class="btn" id="btn-origin">Reset View</button>
+  </div>
+</div>
+
+<div id="main-canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div id="tooltip"></div>
+  <div id="status">Click and drag to pan · Scroll to zoom · Select a tool above</div>
+</div>
+
+<script>
+// ============================================================
+// HYPERBOLIC GEOMETRY ENGINE (Poincaré Disk Model)
+// ============================================================
+
+const DISK_RADIUS = 1.0;  // unit disk
+
+// Convert screen coords to disk coords
+function screenToDisk(sx, sy, cx, cy, scale) {
+  return {
+    x: (sx - cx) / scale,
+    y: (sy - cy) / scale
+  };
+}
+
+function diskToScreen(dx, dy, cx, cy, scale) {
+  return {
+    x: dx * scale + cx,
+    y: dy * scale + cy
+  };
+}
+
+// Check if point is inside the disk
+function inDisk(p) {
+  return p.x * p.x + p.y * p.y < DISK_RADIUS * DISK_RADIUS;
+}
+
+// Hyperbolic distance between two points in the Poincaré disk
+function hyperbolicDist(p, q) {
+  const num = (p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y);
+  const denom = (1 - p.x * p.x - p.y * p.y) * (1 - q.x * q.x - q.y * q.y);
+  if (denom <= 0) return Infinity;
+  const arg = 1 + 2 * num / denom;
+  return Math.acosh(Math.max(1, arg));
+}
+
+// Find the geodesic (circular arc orthogonal to boundary) through two points
+// Returns: { center: {x,y}, radius, startAngle, endAngle, isLine }
+function computeGeodesic(p, q) {
+  // Special case: points on same ray from origin
+  const cross = p.x * q.y - p.y * q.x;
+  if (Math.abs(cross) < 1e-10) {
+    // Through origin — straight line
+    return { isLine: true, p1: p, p2: q };
+  }
+
+  // For a circle orthogonal to the unit circle through p and q:
+  // The center lies on the perpendicular bisector of p and q
+  // and satisfies |center|² = radius² + 1 (orthogonality condition)
+  // After algebra: center = (p_perp - q_perp) / cross where p_perp is inversion
+  
+  const pNorm2 = p.x * p.x + p.y * p.y;
+  const qNorm2 = q.x * q.x + q.y * q.y;
+
+  const px_inv = p.x / pNorm2;
+  const py_inv = p.y / pNorm2;
+  const qx_inv = q.x / qNorm2;
+  const qy_inv = q.y / qNorm2;
+
+  // Center of the circle through p, q, and their inverses
+  const denom = 2 * (p.x * q.y - p.y * q.x);
+  if (Math.abs(denom) < 1e-10) return { isLine: true, p1: p, p2: q };
+
+  const cx = (q.y * (pNorm2 + 1) - p.y * (qNorm2 + 1)) / denom;
+  const cy = (p.x * (qNorm2 + 1) - q.x * (pNorm2 + 1)) / denom;
+  const r = Math.sqrt(cx * cx + cy * cy - 1);
+
+  if (r < 0 || !isFinite(r)) return { isLine: true, p1: p, p2: q };
+
+  // Compute angles from center to p and q
+  const angP = Math.atan2(p.y - cy, p.x - cx);
+  const angQ = Math.atan2(q.y - cy, q.x - cx);
+
+  return { isLine: false, center: { x: cx, y: cy }, radius: r, angP, angQ };
+}
+
+// Sample points along a geodesic
+function sampleGeodesic(geo, numPoints = 200) {
+  const pts = [];
+  if (geo.isLine) {
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      pts.push({
+        x: geo.p1.x + t * (geo.p2.x - geo.p1.x),
+        y: geo.p1.y + t * (geo.p2.y - geo.p1.y)
+      });
+    }
+  } else {
+    let angP = geo.angP, angQ = geo.angQ;
+    // Ensure shorter arc
+    if (angQ < angP) angQ += 2 * Math.PI;
+    if (angQ - angP > Math.PI) { [angP, angQ] = [angQ, angP + 2 * Math.PI]; }
+    for (let i = 0; i <= numPoints; i++) {
+      const a = angP + (angQ - angP) * i / numPoints;
+      pts.push({
+        x: geo.center.x + geo.radius * Math.cos(a),
+        y: geo.center.y + geo.radius * Math.sin(a)
+      });
+    }
+  }
+  return pts;
+}
+
+// Hyperbolic midpoint
+function hyperbolicMidpoint(p, q) {
+  const dist = hyperbolicDist(p, q);
+  if (dist === 0) return { x: p.x, y: p.y };
+  
+  // Möbius transformation that maps p to 0
+  const a = 1, c = complex(-p.x, -p.y);
+  const b = complex(-p.x, -p.y), d = 1;
+
+  // Apply to q
+  const qTrans = mobiusApply(q, a, b, c, d);
+  // qTrans is at distance dist from 0; midpoint is at distance dist/2
+  const qNorm = Math.sqrt(qTrans.x * qTrans.x + qTrans.y * qTrans.y);
+  if (qNorm < 1e-10) return { x: p.x, y: p.y };
+  
+  const tVal = Math.tanh(dist / 4) / Math.tanh(dist / 2);
+  const midTrans = { x: qTrans.x * tVal, y: qTrans.y * tVal };
+  
+  // Inverse Möbius transformation
+  return mobiusApply(midTrans, d, { x: -b.x, y: -b.y }, { x: -c.x, y: -c.y }, a);
+}
+
+function complex(x, y) { return { x, y }; }
+
+function mobiusApply(z, a, b, c, d) {
+  // (a*z + b) / (c*z + d)
+  const num_x = a.x * z.x - a.y * z.y + b.x;
+  const num_y = a.x * z.y + a.y * z.x + b.y;
+  const den_x = c.x * z.x - c.y * z.y + d.x;
+  const den_y = c.x * z.y + c.y * z.x + d.y;
+  const den2 = den_x * den_x + den_y * den_y;
+  return {
+    x: (num_x * den_x + num_y * den_y) / den2,
+    y: (num_y * den_x - num_x * den_y) / den2
+  };
+}
+
+// ============================================================
+// TESSELLATION GENERATOR
+// ============================================================
+
+function generateTessellation(p, q) {
+  // Generate a {p,q} hyperbolic tessellation using reflection groups
+  // p = number of sides per polygon, q = number of polygons meeting at each vertex
+  // For hyperbolic: (p-2)(q-2) > 4
+
+  const edges = [];
+  const maxDepth = 128;
+  const maxEdges = 8000;
+
+  // Compute the central polygon vertex positions
+  const centralAngle = 2 * Math.PI / p;
+  // The hyperbolic distance from origin to vertex for a regular {p,q} tessellation
+  // cosh(r) = cos(π/p) / sin(π/q)
+  const cosR = Math.cos(Math.PI / p) / Math.sin(Math.PI / q);
+  if (cosR < 1) return edges; // Not hyperbolic
+  const r = Math.acosh(cosR);
+  const euclideanR = Math.tanh(r / 2); // Poincaré disk radius
+
+  // Vertices of the central regular p-gon
+  const vertices = [];
+  for (let i = 0; i < p; i++) {
+    const angle = centralAngle * i - Math.PI / 2;
+    vertices.push({
+      x: euclideanR * Math.cos(angle),
+      y: euclideanR * Math.sin(angle)
+    });
+  }
+
+  // Reflect point across edge (geodesic through a, b)
+  function reflectAcrossEdge(pt, a, b) {
+    if (a.x === b.x && a.y === b.y) return { x: pt.x, y: pt.y };
+    const geo = computeGeodesic(a, b);
+    if (geo.isLine) {
+      // Reflect across line through a and b
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy;
+      const t = ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / len2;
+      const projX = a.x + t * dx, projY = a.y + t * dy;
+      return { x: 2 * projX - pt.x, y: 2 * projY - pt.y };
+    }
+
+    // Reflect across circle (inversion)
+    const dx = pt.x - geo.center.x;
+    const dy = pt.y - geo.center.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < 1e-10) return { x: pt.x, y: pt.y };
+    const factor = geo.radius * geo.radius / d2;
+    return {
+      x: geo.center.x + dx * factor,
+      y: geo.center.y + dy * factor
+    };
+  }
+
+  // BFS over the reflection group
+  const visited = new Set();
+  const queue = [];
+
+  // Add initial polygon
+  function addPolygon(verts, depth, parentEdgeIdx) {
+    if (edges.length >= maxEdges || depth > maxDepth) return;
+    for (let i = 0; i < verts.length; i++) {
+      const j = (i + 1) % verts.length;
+      const key = edgeKey(verts[i], verts[j]);
+      if (!visited.has(key)) {
+        visited.add(key);
+        edges.push({ a: { x: verts[i].x, y: verts[i].y }, b: { x: verts[j].x, y: verts[j].y }, depth });
+      }
+    }
+    // Reflect polygon across each edge to generate neighbors
+    if (depth < maxDepth) {
+      for (let i = 0; i < verts.length; i++) {
+        const j = (i + 1) % verts.length;
+        const newVerts = verts.map(v => reflectAcrossEdge(v, verts[i], verts[j]));
+        if (newVerts.every(v => inDisk({ x: v.x + 0.01, y: v.y + 0.01 }))) {
+          queue.push({ verts: newVerts, depth: depth + 1 });
+        }
+      }
+    }
+  }
+
+  addPolygon(vertices, 0, -1);
+
+  // Process queue with depth limit
+  let processed = 0;
+  while (queue.length > 0 && edges.length < maxEdges) {
+    const item = queue.shift();
+    addPolygon(item.verts, item.depth, -1);
+    processed++;
+    if (processed > 5000) break;
+  }
+
+  return edges;
+}
+
+function edgeKey(a, b) {
+  const eps = 0.001;
+  const ax = Math.round(a.x / eps) * eps;
+  const ay = Math.round(a.y / eps) * eps;
+  const bx = Math.round(b.x / eps) * eps;
+  const by = Math.round(b.y / eps) * eps;
+  if (ax < bx || (ax === bx && ay < by)) return `${ax},${ay}-${bx},${by}`;
+  return `${bx},${by}-${ax},${ay}`;
+}
+
+// ============================================================
+// RENDERER
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let viewCx = 0, viewCy = 0; // disk center in screen coords
+let scale = 300; // pixels per unit disk radius
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let dragViewStart = { cx: 0, cy: 0 };
+
+// State
+let points = [];
+let geodesics = [];
+let triangles = []; // { a, b, c, completed }
+let currentTool = 'navigate';
+let geodesicStart = null;
+let trianglePoints = [];
+let tessellation = 'none';
+let tessEdges = [];
+let hoveredPoint = null;
+let measurePoint = null;
+
+function resize() {
+  const wrap = document.getElementById('main-canvas-wrap');
+  const size = Math.min(wrap.clientWidth, wrap.clientHeight) - 40;
+  canvas.width = size;
+  canvas.height = size;
+  viewCx = size / 2;
+  viewCy = size / 2;
+  scale = size * 0.42; // disk takes ~84% of canvas
+}
+
+function render() {
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, w, h);
+
+  // Disk boundary
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, scale * DISK_RADIUS, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0d0d20';
+  ctx.fill();
+  ctx.strokeStyle = '#2a2a50';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Subtle radial gradient
+  const grad = ctx.createRadialGradient(viewCx, viewCy, 0, viewCx, viewCy, scale * DISK_RADIUS);
+  grad.addColorStop(0, 'rgba(30,30,60,0)');
+  grad.addColorStop(0.6, 'rgba(30,30,60,0)');
+  grad.addColorStop(1, 'rgba(20,20,40,0.4)');
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, scale * DISK_RADIUS, 0, 2 * Math.PI);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Clip to disk
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, scale * DISK_RADIUS, 0, 2 * Math.PI);
+  ctx.clip();
+
+  // Tessellation
+  if (tessEdges.length > 0) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 0.5;
+    for (const edge of tessEdges) {
+      const geo = computeGeodesic(edge.a, edge.b);
+      drawGeodesicArc(geo, false);
+    }
+  }
+
+  // Geodesics
+  for (const geo of geodesics) {
+    ctx.strokeStyle = 'rgba(96,208,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
+    drawGeodesicArc(geo, false);
+  }
+
+  // Active geodesic being drawn
+  if (geodesicStart && hoveredPoint) {
+    const geo = computeGeodesic(geodesicStart, hoveredPoint);
+    ctx.strokeStyle = 'rgba(96,208,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    drawGeodesicArc(geo, false);
+    ctx.setLineDash([]);
+  }
+
+  // Triangles
+  for (const tri of triangles) {
+    drawTriangle(tri);
+  }
+
+  // Active triangle
+  if (trianglePoints.length === 2 && hoveredPoint) {
+    const tri = { a: trianglePoints[0], b: trianglePoints[1], c: hoveredPoint, completed: false };
+    drawTriangle(tri);
+  } else if (trianglePoints.length === 1 && hoveredPoint) {
+    const geo = computeGeodesic(trianglePoints[0], hoveredPoint);
+    ctx.strokeStyle = 'rgba(255,96,112,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    drawGeodesicArc(geo, false);
+    ctx.setLineDash([]);
+  }
+
+  // Measurement line
+  if (measurePoint && hoveredPoint) {
+    ctx.strokeStyle = 'rgba(240,192,96,0.6)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    const sp = diskToScreen(measurePoint.x, measurePoint.y, viewCx, viewCy, scale);
+    const ep = diskToScreen(hoveredPoint.x, hoveredPoint.y, viewCx, viewCy, scale);
+    ctx.moveTo(sp.x, sp.y);
+    ctx.lineTo(ep.x, ep.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+
+  // Points (drawn on top, outside clip)
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const sp = diskToScreen(p.x, p.y, viewCx, viewCy, scale);
+    const isHovered = hoveredPoint && hoveredPoint.id === p.id;
+    const r = isHovered ? 7 : 5;
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, r + 3, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(240,192,96,0.2)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = isHovered ? '#f0d060' : '#f0c060';
+    ctx.fill();
+    ctx.strokeStyle = '#0a0a14';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Triangle vertices
+  for (const tri of triangles) {
+    if (!tri.completed) continue;
+    for (const v of [tri.a, tri.b, tri.c]) {
+      const sp = diskToScreen(v.x, v.y, viewCx, viewCy, scale);
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ff6070';
+      ctx.fill();
+    }
+  }
+
+  // Triangle points being placed
+  for (const p of trianglePoints) {
+    const sp = diskToScreen(p.x, p.y, viewCx, viewCy, scale);
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ff6070';
+    ctx.fill();
+    ctx.strokeStyle = '#0a0a14';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Disk boundary on top
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, scale * DISK_RADIUS, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#2a2a50';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawGeodesicArc(geo, highlighted) {
+  if (geo.isLine) {
+    const sp = diskToScreen(geo.p1.x, geo.p1.y, viewCx, viewCy, scale);
+    const ep = diskToScreen(geo.p2.x, geo.p2.y, viewCx, viewCy, scale);
+    ctx.beginPath();
+    ctx.moveTo(sp.x, sp.y);
+    ctx.lineTo(ep.x, ep.y);
+    ctx.stroke();
+  } else {
+    const sc = diskToScreen(geo.center.x, geo.center.y, viewCx, viewCy, scale);
+    const sr = geo.radius * scale;
+    let a1 = geo.angP, a2 = geo.angQ;
+    if (a2 < a1) a2 += 2 * Math.PI;
+    if (a2 - a1 > Math.PI) [a1, a2] = [a2, a1 + 2 * Math.PI];
+    ctx.beginPath();
+    ctx.arc(sc.x, sc.y, sr, a1, a2);
+    ctx.stroke();
+  }
+}
+
+function drawTriangle(tri) {
+  const geoAB = computeGeodesic(tri.a, tri.b);
+  const geoBC = computeGeodesic(tri.b, tri.c);
+  const geoCA = computeGeodesic(tri.c, tri.a);
+
+  if (tri.completed) {
+    // Fill with translucent color
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(viewCx, viewCy, scale * DISK_RADIUS, 0, 2 * Math.PI);
+    ctx.clip();
+
+    ctx.fillStyle = 'rgba(255,96,112,0.15)';
+    ctx.beginPath();
+    traceGeodesicToPath(geoAB);
+    traceGeodesicToPath(geoBC);
+    traceGeodesicToPath(geoCA);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  ctx.strokeStyle = tri.completed ? 'rgba(255,96,112,0.7)' : 'rgba(255,96,112,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash(tri.completed ? [] : [5, 5]);
+  drawGeodesicArc(geoAB, false);
+  drawGeodesicArc(geoBC, false);
+  drawGeodesicArc(geoCA, false);
+  ctx.setLineDash([]);
+}
+
+function traceGeodesicToPath(geo) {
+  if (geo.isLine) {
+    const sp = diskToScreen(geo.p1.x, geo.p1.y, viewCx, viewCy, scale);
+    ctx.lineTo(sp.x, sp.y);
+  } else {
+    const sc = diskToScreen(geo.center.x, geo.center.y, viewCx, viewCy, scale);
+    const sr = geo.radius * scale;
+    let a1 = geo.angP, a2 = geo.angQ;
+    if (a2 < a1) a2 += 2 * Math.PI;
+    if (a2 - a1 > Math.PI) [a1, a2] = [a2, a1 + 2 * Math.PI];
+    // Move to start
+    const sx = sc.x + sr * Math.cos(a1);
+    const sy = sc.y + sr * Math.sin(a1);
+    ctx.lineTo(sx, sy);
+    ctx.arc(sc.x, sc.y, sr, a1, a2);
+  }
+}
+
+// ============================================================
+// INTERACTION
+// ============================================================
+
+let pointIdCounter = 0;
+
+function getMouseDiskPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  return screenToDisk(sx, sy, viewCx, viewCy, scale);
+}
+
+function findClosestPoint(diskPos, threshold = 0.06) {
+  let best = null, bestDist = threshold;
+  for (const p of points) {
+    const d = Math.hypot(diskPos.x - p.x, diskPos.y - p.y);
+    if (d < bestDist) { best = p; bestDist = d; }
+  }
+  for (const p of trianglePoints) {
+    const d = Math.hypot(diskPos.x - p.x, diskPos.y - p.y);
+    if (d < bestDist) { best = p; bestDist = d; }
+  }
+  return best;
+}
+
+function handleClick(e) {
+  const diskPos = getMouseDiskPos(e);
+  if (!inDisk(diskPos)) return;
+
+  const near = findClosestPoint(diskPos);
+
+  switch (currentTool) {
+    case 'point':
+      const newPoint = { x: diskPos.x, y: diskPos.y, id: ++pointIdCounter };
+      points.push(newPoint);
+      render();
+      break;
+
+    case 'geodesic':
+      if (geodesicStart && near) {
+        geodesics.push(computeGeodesic(geodesicStart, near));
+        geodesicStart = null;
+        render();
+        updateInfo(null);
+      } else if (near) {
+        geodesicStart = near;
+        render();
+      }
+      break;
+
+    case 'triangle':
+      if (near && trianglePoints.length < 2) {
+        trianglePoints.push({ x: near.x, y: near.y, id: near.id });
+        if (trianglePoints.length === 2) {
+          // Auto-complete with hover
+        }
+        render();
+      }
+      break;
+
+    case 'measure':
+      if (measurePoint && near) {
+        const dist = hyperbolicDist(measurePoint, near);
+        updateInfo(near, dist);
+        measurePoint = null;
+        render();
+      } else if (near) {
+        measurePoint = near;
+        render();
+      }
+      break;
+  }
+}
+
+function handleDblClick(e) {
+  const diskPos = getMouseDiskPos(e);
+  if (!inDisk(diskPos)) return;
+
+  if (currentTool === 'triangle' && trianglePoints.length === 2) {
+    const near = findClosestPoint(diskPos, 0.1);
+    const third = near || { x: diskPos.x, y: diskPos.y };
+    triangles.push({ a: trianglePoints[0], b: trianglePoints[1], c: third, completed: true });
+    trianglePoints = [];
+    updateTriangleInfo(triangles[triangles.length - 1]);
+    render();
+  }
+}
+
+function handleMouseMove(e) {
+  const diskPos = getMouseDiskPos(e);
+  const near = findClosestPoint(diskPos);
+
+  if (near !== hoveredPoint) {
+    hoveredPoint = near;
+    canvas.style.cursor = near ? 'pointer' : (currentTool === 'navigate' ? 'grab' : 'crosshair');
+    if (!isDragging) render();
+  } else if (geodesicStart && currentTool === 'geodesic') {
+    render();
+  } else if (measurePoint && currentTool === 'measure') {
+    render();
+  } else if (trianglePoints.length >= 1 && currentTool === 'triangle') {
+    render();
+  }
+
+  updateInfo(diskPos);
+}
+
+function handleMouseDown(e) {
+  if (currentTool === 'navigate') {
+    isDragging = true;
+    dragStart = { x: e.clientX, y: e.clientY };
+    dragViewStart = { cx: viewCx, cy: viewCy };
+    canvas.style.cursor = 'grabbing';
+  }
+}
+
+function handleMouseUp(e) {
+  if (isDragging) {
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    if (Math.abs(dx) < 3 && Math.abs(dy) < 3) {
+      handleClick(e);
+    }
+    isDragging = false;
+    canvas.style.cursor = currentTool === 'navigate' ? 'grab' : 'crosshair';
+  }
+}
+
+function handleWheel(e) {
+  e.preventDefault();
+  const zoomFactor = e.deltaY < 0 ? 1.08 : 0.926;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  viewCx = mx - (mx - viewCx) * zoomFactor;
+  viewCy = my - (my - viewCy) * zoomFactor;
+  scale *= zoomFactor;
+  scale = Math.max(50, Math.min(3000, scale));
+  render();
+}
+
+function updateInfo(diskPos, measuredDist) {
+  document.getElementById('info-pos').textContent = diskPos
+    ? `(${diskPos.x.toFixed(3)}, ${diskPos.y.toFixed(3)})`
+    : '—';
+  document.getElementById('info-dist').textContent = measuredDist
+    ? measuredDist.toFixed(4)
+    : '—';
+  document.getElementById('info-euc').textContent = diskPos
+    ? Math.hypot(diskPos.x, diskPos.y).toFixed(4)
+    : '—';
+}
+
+function updateTriangleInfo(tri) {
+  if (!tri || !tri.completed) return;
+  const dAB = hyperbolicDist(tri.a, tri.b);
+  const dBC = hyperbolicDist(tri.b, tri.c);
+  const dCA = hyperbolicDist(tri.c, tri.a);
+
+  // Hyperbolic law of cosines for angles
+  const cosA = (Math.cosh(dAB) * Math.cosh(dCA) - Math.cosh(dBC)) / (Math.sinh(dAB) * Math.sinh(dCA));
+  const cosB = (Math.cosh(dAB) * Math.cosh(dBC) - Math.cosh(dCA)) / (Math.sinh(dAB) * Math.sinh(dBC));
+  const cosC = (Math.cosh(dBC) * Math.cosh(dCA) - Math.cosh(dAB)) / (Math.sinh(dBC) * Math.sinh(dCA));
+
+  const angleA = Math.acos(Math.max(-1, Math.min(1, cosA)));
+  const angleB = Math.acos(Math.max(-1, Math.min(1, cosB)));
+  const angleC = Math.acos(Math.max(-1, Math.min(1, cosC)));
+
+  const sumDeg = (angleA + angleB + angleC) * 180 / Math.PI;
+  const defect = Math.PI - (angleA + angleB + angleC); // Hyperbolic area
+
+  document.getElementById('info-triangle').style.display = 'block';
+  document.getElementById('info-angles').textContent = `${sumDeg.toFixed(2)}° (< 180° in hyperbolic!)`;
+  document.getElementById('info-area').textContent = defect.toFixed(4);
+
+  document.getElementById('info-dist').textContent =
+    `${dAB.toFixed(3)}, ${dBC.toFixed(3)}, ${dCA.toFixed(3)}`;
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tool) {
+      currentTool = btn.dataset.tool;
+      document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      geodesicStart = null;
+      trianglePoints = [];
+      measurePoint = null;
+      canvas.style.cursor = currentTool === 'navigate' ? 'grab' : 'crosshair';
+      document.getElementById('info-triangle').style.display = 'none';
+      document.getElementById('info-dist').textContent = '—';
+      document.getElementById('info-euc').textContent = '—';
+    }
+    if (btn.dataset.tess) {
+      tessellation = btn.dataset.tess;
+      document.querySelectorAll('[data-tess]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (tessellation === 'none') {
+        tessEdges = [];
+      } else {
+        const [p, q] = tessellation.split('').map(Number);
+        document.getElementById('status').textContent = `Generating {${p},${q}} tessellation...`;
+        setTimeout(() => {
+          tessEdges = generateTessellation(p, q);
+          document.getElementById('status').textContent =
+            `{${p},${q}} tessellation: ${tessEdges.length} edges`;
+          render();
+        }, 50);
+      }
+      render();
+    }
+    render();
+  });
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  points = [];
+  geodesics = [];
+  triangles = [];
+  trianglePoints = [];
+  geodesicStart = null;
+  measurePoint = null;
+  tessEdges = [];
+  tessellation = 'none';
+  document.querySelectorAll('[data-tess]').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-tess="none"]').classList.add('active');
+  document.getElementById('info-triangle').style.display = 'none';
+  render();
+});
+
+document.getElementById('btn-export').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'hyperbolic-canvas.png';
+  link.href = canvas.toDataURL();
+  link.click();
+});
+
+document.getElementById('btn-origin').addEventListener('click', () => {
+  resize();
+  render();
+});
+
+canvas.addEventListener('mousemove', handleMouseMove);
+canvas.addEventListener('mousedown', handleMouseDown);
+canvas.addEventListener('mouseup', handleMouseUp);
+canvas.addEventListener('wheel', handleWheel, { passive: false });
+canvas.addEventListener('dblclick', handleDblClick);
+canvas.addEventListener('mouseleave', () => {
+  hoveredPoint = null;
+  isDragging = false;
+  render();
+});
+
+window.addEventListener('resize', () => { resize(); render(); });
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    handleMouseDown({ clientX: t.clientX, clientY: t.clientY, button: 0 });
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1 && isDragging) {
+    const t = e.touches[0];
+    viewCx = dragViewStart.cx + (t.clientX - dragStart.x);
+    viewCy = dragViewStart.cy + (t.clientY - dragStart.y);
+    render();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  if (isDragging) {
+    handleMouseUp({ clientX: dragStart.x, clientY: dragStart.y, button: 0 });
+  }
+});
+
+// Initialize
+resize();
+
+// Start with a nice tessellation
+setTimeout(() => {
+  tessellation = '37';
+  document.querySelector('[data-tess="37"]').classList.add('active');
+  tessEdges = generateTessellation(3, 7);
+  document.getElementById('status').textContent = `{3,7} tessellation: ${tessEdges.length} edges — Click to add points and geodesics`;
+  render();
+}, 200);
+
+updateInfo(null);
+</script>
+
+</body>
+</html>

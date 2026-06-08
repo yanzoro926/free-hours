@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tree to Hyperbolic — Embedding Visualizer</title>
+<style>
+  :root {
+    --bg: #0a0a14;
+    --surface: #12122a;
+    --text: #e0e0f0;
+    --accent: #c4a0ff;
+    --accent2: #60d0ff;
+    --gold: #f0c060;
+    --danger: #ff6070;
+    --border: #2a2a44;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #sidebar {
+    width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  #sidebar h2 {
+    font-size: 1.1em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #main-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  canvas { display: block; border-radius: 50%; }
+  .btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.78em;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.08); }
+  .btn.active { background: var(--accent); color: #0a0a14; border-color: var(--accent); font-weight: 600; }
+  textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72em;
+    border-radius: 6px;
+    resize: vertical;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent2); }
+  .info-row { display: flex; justify-content: space-between; font-size: 0.72em; }
+  .info-row .label { color: #888; }
+  .info-row .value { color: var(--accent2); font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>Tree → Hyperbolic</h2>
+  <p style="font-size:0.72em;color:#888">Hierarchical data naturally lives in hyperbolic space. Tree structures — with exponentially branching nodes — map perfectly onto the Poincaré disk.</p>
+
+  <div>
+    <label style="font-size:0.7em;color:#888">Tree Definition (indent = depth)</label>
+    <textarea id="treeInput" rows="8" style="height:140px">Animals
+  Mammals
+    Primates
+      Human
+      Chimpanzee
+      Gorilla
+    Carnivores
+      Wolf
+      Lion
+      Bear
+  Birds
+    Raptors
+      Eagle
+      Hawk
+    Waterfowl
+      Duck
+      Swan
+  Reptiles
+    Snakes
+      Python
+      Cobra
+    Lizards
+      Gecko
+      Iguana</textarea>
+  </div>
+
+  <div>
+    <label style="font-size:0.7em;color:#888">Layout
+      <span style="float:right" id="layoutAlgo">Poincaré Embeddings</span>
+    </label>
+    <div style="display:flex;gap:6px;margin:6px 0">
+      <button class="btn active" id="btnPoincare" style="flex:1">Poincaré</button>
+      <button class="btn" id="btnEuclidean" style="flex:1">Euclidean</button>
+      <button class="btn" id="btnRandom" style="flex:1">Random</button>
+    </div>
+  </div>
+
+  <div>
+    <label style="font-size:0.7em;color:#888">Curvature: <span id="curvatureVal">0.8</span></label>
+    <input type="range" id="curvature" min="0" max="2" step="0.05" value="0.8">
+  </div>
+
+  <div>
+    <label style="font-size:0.7em;color:#888">Expansion: <span id="expansionVal">1.0</span></label>
+    <input type="range" id="expansion" min="0.3" max="2.5" step="0.05" value="1.0">
+  </div>
+
+  <button class="btn" id="btnUpdate" style="background:var(--accent2);color:#0a0a14;font-weight:600">Update Embedding</button>
+
+  <div class="info-row"><span class="label">Nodes:</span><span class="value" id="infoNodes">—</span></div>
+  <div class="info-row"><span class="label">Max Depth:</span><span class="value" id="infoDepth">—</span></div>
+  <div class="info-row"><span class="label">Branch Factor:</span><span class="value" id="infoBranch">—</span></div>
+  <div class="info-row"><span class="label">Layout:</span><span class="value" id="infoLayout">—</span></div>
+</div>
+
+<div id="main-wrap">
+  <canvas id="canvas"></canvas>
+</div>
+
+<script>
+// ============================================================
+// TREE PARSER
+// ============================================================
+
+function parseIndentedTree(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length === 0) return null;
+
+  const root = { name: '', children: [], depth: 0 };
+  const stack = [{ node: root, depth: -1 }];
+
+  for (const line of lines) {
+    const indent = line.search(/\S/);
+    if (indent < 0) continue;
+    const depth = Math.floor(indent / 2);
+    const name = line.trim();
+
+    // Find parent
+    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
+      stack.pop();
+    }
+    if (stack.length === 0) {
+      // New root
+      root.name = name;
+      root.children = [];
+      stack.push({ node: root, depth: 0 });
+      continue;
+    }
+
+    const parent = stack[stack.length - 1].node;
+    const newNode = { name, children: [], depth, parent };
+    parent.children.push(newNode);
+    stack.push({ node: newNode, depth });
+  }
+
+  return root;
+}
+
+function flattenTree(root) {
+  const nodes = [];
+  const edges = [];
+  function walk(node) {
+    nodes.push(node);
+    for (const child of node.children) {
+      edges.push([node, child]);
+      walk(child);
+    }
+  }
+  walk(root);
+  return { nodes, edges };
+}
+
+function treeStats(root) {
+  const { nodes, edges } = flattenTree(root);
+  let maxDepth = 0;
+  const depthCount = {};
+  for (const n of nodes) {
+    maxDepth = Math.max(maxDepth, n.depth || 0);
+    depthCount[n.depth || 0] = (depthCount[n.depth || 0] || 0) + 1;
+  }
+  const nonLeafDepths = Object.keys(depthCount).filter(d => {
+    const children = nodes.filter(n => (n.depth || 0) === parseInt(d) + 1).length;
+    return children > 0;
+  });
+  return { count: nodes.length, maxDepth, depthCount };
+}
+
+// ============================================================
+// HYPERBOLIC EMBEDDING (Poincaré Disk)
+// ============================================================
+
+function poincareEmbedding(root, curvature = 0.8, expansion = 1.0) {
+  // Place nodes in the Poincaré disk using angular fan-out
+  // Root at origin, children spread in angle based on branch width
+  // Radial distance grows with depth but compresses near boundary
+
+  const positions = new Map();
+
+  function place(node, depth, angleStart, angleSpan, parentPos) {
+    // Determine radius based on depth (compressed near boundary)
+    // r(depth) = tanh(curvature * expansion * depth / 2)
+    const r = Math.tanh(curvature * expansion * depth / 2);
+
+    // Angle: center of the span
+    const angle = angleStart + angleSpan / 2;
+
+    const pos = { x: r * Math.cos(angle), y: r * Math.sin(angle), r, angle, depth };
+    positions.set(node, pos);
+
+    if (node.children.length === 0) return;
+
+    // Allocate angular space proportional to subtree size
+    const subtreeSizes = node.children.map(c => countLeaves(c));
+    const totalLeaves = subtreeSizes.reduce((a, b) => a + b, 0) || 1;
+
+    let currentAngle = angleStart;
+    for (let i = 0; i < node.children.length; i++) {
+      const childAngleSpan = angleSpan * (subtreeSizes[i] / totalLeaves);
+      place(node.children[i], depth + 1, currentAngle, childAngleSpan, pos);
+      currentAngle += childAngleSpan;
+    }
+  }
+
+  function countLeaves(node) {
+    if (node.children.length === 0) return 1;
+    return node.children.reduce((sum, c) => sum + countLeaves(c), 0);
+  }
+
+  place(root, 0, 0, 2 * Math.PI, null);
+  return positions;
+}
+
+function euclideanEmbedding(root, expansion = 1.0) {
+  // Standard radial tree layout in Euclidean space
+  const positions = new Map();
+
+  function place(node, depth, angleStart, angleSpan, parentPos) {
+    const r = expansion * depth / Math.max(1, depth + 3) * 0.95;
+    const angle = angleStart + angleSpan / 2;
+    const pos = { x: r * Math.cos(angle), y: r * Math.sin(angle), r, angle, depth };
+    positions.set(node, pos);
+
+    if (node.children.length === 0) return;
+    const subtreeSizes = node.children.map(c => countLeaves(c));
+    const totalLeaves = subtreeSizes.reduce((a, b) => a + b, 0) || 1;
+    let currentAngle = angleStart;
+    for (let i = 0; i < node.children.length; i++) {
+      const childAngleSpan = angleSpan * (subtreeSizes[i] / totalLeaves);
+      place(node.children[i], depth + 1, currentAngle, childAngleSpan, pos);
+      currentAngle += childAngleSpan;
+    }
+  }
+
+  function countLeaves(node) {
+    if (node.children.length === 0) return 1;
+    return node.children.reduce((sum, c) => sum + countLeaves(c), 0);
+  }
+
+  place(root, 0, 0, 2 * Math.PI, null);
+  return positions;
+}
+
+function randomEmbedding(root) {
+  const positions = new Map();
+  const { nodes } = flattenTree(root);
+  for (const node of nodes) {
+    const r = Math.random() * 0.9;
+    const angle = Math.random() * 2 * Math.PI;
+    positions.set(node, { x: r * Math.cos(angle), y: r * Math.sin(angle), r, angle, depth: node.depth || 0 });
+  }
+  return positions;
+}
+
+// ============================================================
+// RENDERER
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let currentRoot = null;
+let currentPositions = null;
+let currentEdges = [];
+let currentLayout = 'poincare';
+
+const diskRadius = 1.0;
+let viewScale = 300;
+let viewCx = 0, viewCy = 0;
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let dragViewStart = { cx: 0, cy: 0 };
+let hoveredNode = null;
+
+function resize() {
+  const wrap = document.getElementById('main-wrap');
+  const size = Math.min(wrap.clientWidth, wrap.clientHeight) - 40;
+  canvas.width = size;
+  canvas.height = size;
+  viewCx = size / 2;
+  viewCy = size / 2;
+  viewScale = size * 0.44;
+}
+
+function diskToScreen(dx, dy) {
+  return { x: dx * viewScale + viewCx, y: dy * viewScale + viewCy };
+}
+
+function render() {
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, w, h);
+
+  // Disk
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, viewScale * diskRadius, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0d0d20';
+  ctx.fill();
+  ctx.strokeStyle = '#2a2a50';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Radial gradient
+  const grad = ctx.createRadialGradient(viewCx, viewCy, 0, viewCx, viewCy, viewScale * diskRadius);
+  grad.addColorStop(0, 'rgba(30,30,60,0)');
+  grad.addColorStop(1, 'rgba(20,20,40,0.3)');
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, viewScale * diskRadius, 0, 2 * Math.PI);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  if (!currentRoot || !currentPositions) return;
+
+  // Clip to disk
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, viewScale * diskRadius, 0, 2 * Math.PI);
+  ctx.clip();
+
+  // Draw edges (geodesics)
+  for (const [parent, child] of currentEdges) {
+    const pp = currentPositions.get(parent);
+    const cp = currentPositions.get(child);
+    if (!pp || !cp) continue;
+
+    // Draw geodesic arc
+    const cross = pp.x * cp.y - pp.y * cp.x;
+    const isLine = Math.abs(cross) < 1e-10;
+
+    if (isLine) {
+      const sp = diskToScreen(pp.x, pp.y);
+      const ep = diskToScreen(cp.x, cp.y);
+      ctx.strokeStyle = 'rgba(96,208,255,0.3)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sp.x, sp.y);
+      ctx.lineTo(ep.x, ep.y);
+      ctx.stroke();
+    } else {
+      const pn2 = pp.x * pp.x + pp.y * pp.y;
+      const cn2 = cp.x * cp.x + cp.y * cp.y;
+      const denom = 2 * cross;
+      const cx = (cp.y * (pn2 + 1) - pp.y * (cn2 + 1)) / denom;
+      const cy = (pp.x * (cn2 + 1) - cp.x * (pn2 + 1)) / denom;
+      const r = Math.sqrt(cx * cx + cy * cy - 1);
+      if (r > 0 && isFinite(r)) {
+        const sc = diskToScreen(cx, cy);
+        const sr = r * viewScale;
+        let a1 = Math.atan2(pp.y - cy, pp.x - cx);
+        let a2 = Math.atan2(cp.y - cy, cp.x - cx);
+        if (a2 < a1) a2 += 2 * Math.PI;
+        if (a2 - a1 > Math.PI) [a1, a2] = [a2, a1 + 2 * Math.PI];
+
+        ctx.strokeStyle = 'rgba(96,208,255,0.3)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, sr, a1, a2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.restore();
+
+  // Draw nodes (outside clip to avoid clipping at boundary)
+  const maxDepth = Math.max(...[...currentPositions.values()].map(p => p.depth), 0) || 1;
+
+  for (const [node, pos] of currentPositions) {
+    const sp = diskToScreen(pos.x, pos.y);
+    if (sp.x < -50 || sp.x > canvas.width + 50 || sp.y < -50 || sp.y > canvas.height + 50) continue;
+
+    const isLeaf = node.children.length === 0;
+    const isHovered = hoveredNode === node;
+    const depthNorm = pos.depth / maxDepth;
+
+    // Size based on depth (closer to boundary = smaller in Euclidean, but we compensate)
+    const baseSize = isLeaf ? 3 : 5;
+    const r = isHovered ? baseSize + 3 : baseSize;
+
+    // Color gradient from accent2 (root) to gold (deep) to danger (leaves)
+    let color;
+    if (isLeaf) {
+      color = `hsl(${Math.round(360 - depthNorm * 60)}, 70%, ${60 + depthNorm * 15}%)`;
+    } else {
+      color = `hsl(${Math.round(200 - depthNorm * 30)}, 80%, ${55 + depthNorm * 20}%)`;
+    }
+
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = isHovered ? '#fff' : color;
+    ctx.fill();
+    if (!isLeaf) {
+      ctx.strokeStyle = '#0a0a14';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Hover label
+  if (hoveredNode) {
+    const hp = currentPositions.get(hoveredNode);
+    if (hp) {
+      const sp = diskToScreen(hp.x, hp.y);
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillRect(sp.x + 8, sp.y - 10, ctx.measureText(hoveredNode.name).width + 16, 20);
+      ctx.fillStyle = '#fff';
+      ctx.font = '11px monospace';
+      ctx.fillText(hoveredNode.name, sp.x + 16, sp.y + 4);
+    }
+  }
+
+  // Redraw boundary
+  ctx.beginPath();
+  ctx.arc(viewCx, viewCy, viewScale * diskRadius, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#2a2a50';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+
+function updateEmbedding() {
+  const treeText = document.getElementById('treeInput').value;
+  const root_ = parseIndentedTree(treeText);
+  if (!root_) return;
+  currentRoot = root_;
+
+  const curvature = parseFloat(document.getElementById('curvature').value);
+  const expansion = parseFloat(document.getElementById('expansion').value);
+
+  switch (currentLayout) {
+    case 'poincare':
+      currentPositions = poincareEmbedding(root_, curvature, expansion);
+      break;
+    case 'euclidean':
+      currentPositions = euclideanEmbedding(root_, expansion);
+      break;
+    case 'random':
+      currentPositions = randomEmbedding(root_);
+      break;
+    default:
+      currentPositions = poincareEmbedding(root_, curvature, expansion);
+  }
+
+  const { nodes, edges } = flattenTree(root_);
+  currentEdges = edges;
+
+  // Update info
+  const stats = treeStats(root_);
+  document.getElementById('infoNodes').textContent = stats.count;
+  document.getElementById('infoDepth').textContent = stats.maxDepth;
+  const nonRoot = nodes.filter(n => n !== root_);
+  const parents = new Set(nonRoot.map(n => nodes.indexOf(n.parent)));
+  document.getElementById('infoBranch').textContent = parents.size > 0
+    ? (nonRoot.length / parents.size).toFixed(1)
+    : '0';
+  document.getElementById('infoLayout').textContent = currentLayout;
+
+  render();
+}
+
+// ============================================================
+// INTERACTION
+// ============================================================
+
+function getMouseDiskPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  return {
+    x: (sx - viewCx) / viewScale,
+    y: (sy - viewCy) / viewScale
+  };
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  const diskPos = getMouseDiskPos(e);
+
+  // Find closest node
+  let best = null, bestDist = 0.06;
+  if (currentPositions) {
+    for (const [node, pos] of currentPositions) {
+      const d = Math.hypot(diskPos.x - pos.x, diskPos.y - pos.y);
+      if (d < bestDist) { best = node; bestDist = d; }
+    }
+  }
+
+  if (best !== hoveredNode) {
+    hoveredNode = best;
+    canvas.style.cursor = best ? 'pointer' : 'grab';
+    render();
+  }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY };
+  dragViewStart = { cx: viewCx, cy: viewCy };
+  canvas.style.cursor = 'grabbing';
+});
+
+canvas.addEventListener('mouseup', () => {
+  isDragging = false;
+  canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    viewCx = dragViewStart.cx + (e.clientX - dragStart.x);
+    viewCy = dragViewStart.cy + (e.clientY - dragStart.y);
+    render();
+  }
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.08 : 0.926;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  viewCx = mx - (mx - viewCx) * factor;
+  viewCy = my - (my - viewCy) * factor;
+  viewScale *= factor;
+  viewScale = Math.max(30, Math.min(3000, viewScale));
+  render();
+}, { passive: false });
+
+canvas.addEventListener('mouseleave', () => {
+  hoveredNode = null;
+  isDragging = false;
+  render();
+});
+
+// ============================================================
+// CONTROLS
+// ============================================================
+
+document.getElementById('btnPoincare').addEventListener('click', function() {
+  currentLayout = 'poincare';
+  this.classList.add('active');
+  document.getElementById('btnEuclidean').classList.remove('active');
+  document.getElementById('btnRandom').classList.remove('active');
+  document.getElementById('layoutAlgo').textContent = 'Poincaré Embeddings';
+  updateEmbedding();
+});
+
+document.getElementById('btnEuclidean').addEventListener('click', function() {
+  currentLayout = 'euclidean';
+  this.classList.add('active');
+  document.getElementById('btnPoincare').classList.remove('active');
+  document.getElementById('btnRandom').classList.remove('active');
+  document.getElementById('layoutAlgo').textContent = 'Euclidean Radial';
+  updateEmbedding();
+});
+
+document.getElementById('btnRandom').addEventListener('click', function() {
+  currentLayout = 'random';
+  this.classList.add('active');
+  document.getElementById('btnPoincare').classList.remove('active');
+  document.getElementById('btnEuclidean').classList.remove('active');
+  document.getElementById('layoutAlgo').textContent = 'Random';
+  updateEmbedding();
+});
+
+document.getElementById('btnUpdate').addEventListener('click', updateEmbedding);
+
+document.getElementById('curvature').addEventListener('input', function() {
+  document.getElementById('curvatureVal').textContent = this.value;
+  if (currentLayout === 'poincare') updateEmbedding();
+});
+
+document.getElementById('expansion').addEventListener('input', function() {
+  document.getElementById('expansionVal').textContent = this.value;
+  updateEmbedding();
+});
+
+window.addEventListener('resize', () => { resize(); render(); });
+
+// Touch
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    isDragging = true;
+    dragStart = { x: t.clientX, y: t.clientY };
+    dragViewStart = { cx: viewCx, cy: viewCy };
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1 && isDragging) {
+    const t = e.touches[0];
+    viewCx = dragViewStart.cx + (t.clientX - dragStart.x);
+    viewCy = dragViewStart.cy + (t.clientY - dragStart.y);
+    render();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { isDragging = false; });
+
+// Initialize
+resize();
+updateEmbedding();
+</script>
+</body>
+</html>
