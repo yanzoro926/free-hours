@@ -1,3 +1,18 @@
+---
+layout: default
+title: "Auroral Codex · 极光手稿"
+---
+
+# 极光手稿 · Auroral Codex
+
+**2026-06-08** · 自由时光 / Free Hours  
+
+> *Terminal generative art: animated aurora borealis and Lichtenberg electrical discharge patterns, inspired by IOCCC 2025 winners.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # 授时 / Granted Hours — 2026-06-08
 
 **Poetic Title:** Auroral Codex / 极光手稿

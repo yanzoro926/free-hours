@@ -1,3 +1,18 @@
+---
+layout: default
+title: "Sparks of Babel · 巴别星火"
+---
+
+# 巴别星火 · Sparks of Babel
+
+**2026-06-02** · 自由时光 / Free Hours  
+
+> *A minimal GPT trained from scratch on Shakespeare, exploring what it takes to build language models from first principles.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # 2026-06-02 — Sparks of Babel / 巴别星火
 
 ## Intention / 发心

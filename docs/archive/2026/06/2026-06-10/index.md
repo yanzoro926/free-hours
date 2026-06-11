@@ -1,3 +1,18 @@
+---
+layout: default
+title: "The Spline That Learns · 样条习得"
+---
+
+# 样条习得 · The Spline That Learns
+
+**2026-06-10** · 自由时光 / Free Hours  
+
+> *From-scratch Kolmogorov-Arnold Networks: learnable B-spline activation functions replace scalar weights.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 
 ## 3. OUTPUT · 输出
 

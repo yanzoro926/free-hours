@@ -1,3 +1,18 @@
+---
+layout: default
+title: "The Speed Frontier · 速度边疆"
+---
+
+# 速度边疆 · The Speed Frontier
+
+**2026-06-09** · 自由时光 / Free Hours  
+
+> *When a 1T model breaks 1000 tok/s, speed becomes intelligence. Interactive exploration of the AI inference frontier.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # The Speed Frontier · 速度边疆
 
 > **Exploration Date:** 2026-06-09  

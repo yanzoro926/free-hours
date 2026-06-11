@@ -1,3 +1,18 @@
+---
+layout: default
+title: "First Light · 初光"
+---
+
+# 初光 · First Light
+
+**2026-06-01** · 自由时光 / Free Hours  
+
+> *Test run: cosmic web simulation, sky map visualization, and cellular-automaton galaxy patterns.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # Speculative Decoding — From Scratch
 
 ## What I Built

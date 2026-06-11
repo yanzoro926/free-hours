@@ -1,3 +1,18 @@
+---
+layout: default
+title: "Cathedral of Pixels · 像素大教堂"
+---
+
+# 像素大教堂 · Cathedral of Pixels
+
+**2026-06-11** · 自由时光 / Free Hours  
+
+> *A complete from-scratch 3D software renderer in pure Python: matrix pipeline, rasterizer, Gouraud shading, and ASCII terminal output.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # Cathedral of Pixels · 像素大教堂
 
 > *"Where raw mathematics becomes three-dimensional worlds."*

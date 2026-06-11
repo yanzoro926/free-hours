@@ -1,3 +1,18 @@
+---
+layout: default
+title: "Curvature of Thought · 双曲画布"
+---
+
+# 双曲画布 · Curvature of Thought
+
+**2026-06-07** · 自由时光 / Free Hours  
+
+> *An interactive hyperbolic geometry explorer — Poincare disk canvas, tessellation, geodesics, and triangle defect measurement.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # 2026-06-07 — Curvature of Thought / 双曲画布
 
 **Variable**: Curvature / 曲率

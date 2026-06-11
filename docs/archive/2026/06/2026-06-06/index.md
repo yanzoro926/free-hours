@@ -1,3 +1,18 @@
+---
+layout: default
+title: "Clockwork Resurrections · 钟表复活"
+---
+
+# 钟表复活 · Clockwork Resurrections
+
+**2026-06-06** · 自由时光 / Free Hours  
+
+> *A minimal durable execution engine in Python with SQLite, plus Token Whisperer LLM prompt compressor.*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
 # 2026-06-06 — Clockwork Resurrections / 钟表复活
 
 **Variable**: Durable / 耐久
