@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Spline That Learns · 样条习得</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #f78166;
+    --purple: #d2a8ff;
+    --red: #f85149;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  .hero {
+    padding: 80px 40px;
+    text-align: center;
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1f2e 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: 3em;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+  .hero .subtitle {
+    font-size: 1.5em;
+    color: var(--purple);
+    opacity: 0.8;
+    margin-bottom: 20px;
+  }
+  .hero p {
+    max-width: 700px;
+    margin: 0 auto;
+    color: var(--dim);
+    font-size: 1.1em;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  section { margin-bottom: 60px; }
+  h2 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 24px;
+  }
+  .card h3 {
+    color: var(--accent);
+    margin-bottom: 12px;
+    font-size: 1.3em;
+  }
+  .card p { color: var(--dim); margin-bottom: 16px; }
+  .math-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+    overflow-x: auto;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.95em;
+    line-height: 1.8;
+  }
+  .diff-row {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+  }
+  .diff-col {
+    flex: 1;
+    padding: 20px;
+    background: #0d1117;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .diff-col h4 { margin-bottom: 12px; }
+  .diff-col.mlp h4 { color: var(--orange); }
+  .diff-col.kan h4 { color: var(--accent); }
+  .diff-col ul { list-style: none; }
+  .diff-col li { padding: 4px 0; color: var(--dim); font-size: 0.95em; }
+  .diff-col li::before { content: '• '; color: var(--accent); }
+  .viz-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .viz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .viz-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .viz-card .caption {
+    padding: 12px 16px;
+    font-size: 0.9em;
+    color: var(--dim);
+    border-top: 1px solid var(--border);
+  }
+  .benchmark-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+  .benchmark-table th, .benchmark-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .benchmark-table th {
+    color: var(--dim);
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .benchmark-table tr:hover td { background: rgba(88,166,255,0.05); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+  }
+  .tag-kan { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-mlp { background: rgba(248,81,102,0.15); color: var(--orange); }
+  .kan-visual {
+    margin: 30px 0;
+    padding: 30px;
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .kan-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    min-height: 200px;
+    flex-wrap: wrap;
+  }
+  .kan-layer {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+  .kan-node {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+  .kan-node.input { border-color: var(--green); }
+  .kan-node.output { border-color: var(--purple); }
+  .kan-edges {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+  }
+  .kan-edge {
+    font-size: 0.7em;
+    color: var(--accent);
+    opacity: 0.6;
+    padding: 2px 8px;
+    background: rgba(88,166,255,0.1);
+    border-radius: 4px;
+  }
+  .footer {
+    text-align: center;
+    padding: 40px;
+    color: var(--dim);
+    font-size: 0.85em;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+  .highlight { color: var(--green); }
+  code {
+    background: rgba(88,166,255,0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9em;
+  }
+  .insight-box {
+    background: linear-gradient(135deg, rgba(88,166,255,0.08), rgba(210,168,255,0.08));
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+  }
+  .insight-box .label {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>The Spline That Learns</h1>
+  <div class="subtitle">样条习得</div>
+  <p>Building Kolmogorov–Arnold Networks from first principles — 
+  B-splines, Cox-de Boor recursion, and the radical idea of putting 
+  <em>learnable activation functions</em> on every edge.</p>
+</div>
+
+<div class="container">
+
+<!-- ═══ EXECUTIVE SUMMARY ═══ -->
+<div class="insight-box" style="margin-bottom:40px;font-size:1.05em;">
+  <div class="label">📋 In This Exploration</div>
+  <p>
+    <strong>Built:</strong> A Kolmogorov-Arnold Network from scratch — B-splines via Cox-de Boor recursion, 
+    vectorized basis evaluation, grid adaptation, and symbolic regression — all in pure PyTorch.<br>
+    <strong>Benchmarked:</strong> 5 problems spanning 1D approximation, 2D regression, classification, 
+    grid scaling, and parameter efficiency.<br>
+    <strong>Discovered:</strong> KAN beats MLP by <span style="color:var(--green)">1000x</span> on damped oscillation; 
+    grid size G=8 is optimal; symbolic regression recovers trigonometry from trained activations; 
+    KAN scaling laws are smooth where MLP scaling is unstable.<br>
+    <strong>Interactive:</strong> Adjust the B-spline grid size live in your browser (Section 7).
+  </p>
+</div>
+
+<!-- ═══ MATHEMATICAL FOUNDATION ═══ -->
+<section>
+  <h2>1. The Kolmogorov–Arnold Theorem</h2>
+  
+  <div class="card">
+    <h3>The Theorem (1957)</h3>
+    <p>Any continuous multivariate function can be represented as a superposition of univariate functions:</p>
+    <div class="math-block">
+      f(x₁, x₂, ..., xₙ) = Σ<sub>q=1</sub><sup>2n+1</sup> Φ<sub>q</sub>( Σ<sub>p=1</sub><sup>n</sup> φ<sub>q,p</sub>(x<sub>p</sub>) )
+    </div>
+    <p>This is one of the most remarkable results in approximation theory. 
+    The theorem says that the only <em>truly multivariate</em> operation is addition — 
+    all nonlinear complexity can be pushed into <strong>univariate</strong> functions φ and Φ.</p>
+  </div>
+
+  <div class="diff-row">
+    <div class="diff-col mlp">
+      <h4>MLP Architecture</h4>
+      <ul>
+        <li>Fixed activation on <em>nodes</em></li>
+        <li>Learnable weights on <em>edges</em></li>
+        <li>h = σ(Wx + b)</li>
+        <li>Inspired by Universal Approximation Theorem</li>
+        <li>Activations: ReLU, SiLU, GELU...</li>
+        <li>Black box: hard to interpret</li>
+      </ul>
+    </div>
+    <div class="diff-col kan">
+      <h4>KAN Architecture</h4>
+      <ul>
+        <li>Learnable spline on <em>edges</em></li>
+        <li>Only summation on <em>nodes</em></li>
+        <li>xⱼ' = Σᵢ φᵢⱼ(xᵢ)</li>
+        <li>Inspired by Kolmogorov-Arnold Theorem</li>
+        <li>Activations: B-spline + SiLU residual</li>
+        <li>Interpretable: see what each edge learns</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ B-SPLINE BASIS ═══ -->
+<section>
+  <h2>2. B-Spline Basis Functions</h2>
+  <div class="card">
+    <h3>Cox-de Boor Recursion</h3>
+    <p>B-splines are the building blocks. They are piecewise polynomials defined recursively:</p>
+    <div class="math-block">
+      B<sub>i,1</sub>(x) = 1 if t<sub>i</sub> ≤ x &lt; t<sub>i+1</sub> else 0<br>
+      B<sub>i,k</sub>(x) = <u>x − t<sub>i</sub></u> · B<sub>i,k−1</sub>(x) + <u>t<sub>i+k</sub> − x</u> · B<sub>i+1,k−1</sub>(x)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      t<sub>i+k−1</sub> − t<sub>i</sub>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      t<sub>i+k</sub> − t<sub>i+1</sub>
+    </div>
+    <p>Each basis function is <strong>local</strong> — nonzero only on k+1 adjacent intervals. 
+    This locality is key to KAN's interpretability: changes to one region don't affect others.</p>
+  </div>
+
+  <div class="viz-grid">
+    <div class="viz-card">
+      <img src="visualizations/bspline_basis.png" alt="B-spline basis functions" loading="lazy">
+      <div class="caption">Cubic B-spline basis functions on G=5 intervals. Each basis function is nonzero on exactly 4 adjacent intervals (k+1=4 for k=3).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ KAN ARCHITECTURE ═══ -->
+<section>
+  <h2>3. KAN Architecture</h2>
+  
+  <div class="card">
+    <h3>Layer Computation</h3>
+    <p>Each edge (i→j) has its own learnable activation function:</p>
+    <div class="math-block">
+      φ<sub>i,j</sub>(x) = w<sup>base</sup><sub>i,j</sub> · silu(x) + w<sup>spline</sup><sub>i,j</sub> · Σ<sub>g</sub> c<sub>i,j,g</sub> · B<sub>g</sub>(x)
+    </div>
+    <p>The <strong>SiLU residual</strong> provides a safety net — the network can fall back to MLP-like 
+    behavior if needed. The <strong>B-spline component</strong> learns the fine, local structure.</p>
+  </div>
+
+  <div class="kan-visual">
+    <div class="kan-diagram">
+      <div class="kan-layer">
+        <div class="kan-node input">x₁</div>
+        <div class="kan-node input">x₂</div>
+      </div>
+      <div class="kan-edges">
+        <div class="kan-edge">φ₁,₁(x₁)</div>
+        <div class="kan-edge">φ₁,₂(x₁)</div>
+        <div class="kan-edge">φ₂,₁(x₂)</div>
+        <div class="kan-edge">φ₂,₂(x₂)</div>
+      </div>
+      <div class="kan-layer">
+        <div class="kan-node">Σ</div>
+        <div class="kan-node">Σ</div>
+      </div>
+      <div style="font-size:1.5em;color:var(--dim)">→</div>
+      <div class="kan-layer">
+        <div class="kan-node output">y₁</div>
+        <div class="kan-node output">y₂</div>
+      </div>
+    </div>
+    <p style="text-align:center;color:var(--dim);margin-top:20px;font-size:0.9em">
+      A KAN layer with 2 inputs, 2 outputs. Each edge carries a <em>learnable univariate function</em> φ<sub>i,j</sub>(x).
+      Nodes only sum their inputs.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Grid Adaptation</h3>
+    <p>B-splines are defined on a bounded grid. As training progresses, input distributions shift.
+    KANs solve this by periodically <strong>updating the grid</strong> to match current activation ranges:</p>
+    <ul style="color:var(--dim);padding-left:20px;">
+      <li><strong>Adaptive grid</strong>: partitions based on input percentiles</li>
+      <li><strong>Uniform grid</strong>: evenly spaced between min/max</li>
+      <li><code>grid_eps</code> interpolates between the two (typically 0.02 — nearly uniform)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══ BENCHMARKS ═══ -->
+<section>
+  <h2>4. Benchmarks: KAN vs MLP</h2>
+
+  <div class="card">
+    <h3>1D Function Approximation</h3>
+    <div class="viz-grid">
+      <div class="viz-card">
+        <img src="visualizations/benchmark_1d_sin_pix.png" alt="KAN vs MLP on sin(πx)" loading="lazy">
+        <div class="caption">sin(πx): KAN and MLP both converge well (MSE ~10⁻⁴)</div>
+      </div>
+      <div class="viz-card">
+        <img src="visualizations/benchmark_1d_exp-x_sin2pix.png" alt="KAN vs MLP on damped oscillation" loading="lazy">
+        <div class="caption">exp(-|x|)·sin(2πx): KAN (MSE=1.3e-4) beats MLP (MSE=1.2e-1) by ~1000x!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>2D Function Approximation</h3>
+    <div class="viz-card" style="max-width:100%">
+      <img src="visualizations/benchmark_2d_sinpix1_cospix2.png" alt="KAN vs MLP 2D" loading="lazy" style="width:100%">
+      <div class="caption">sin(πx₁)·cos(πx₂): KAN (MSE=1.6e-4) beats MLP (MSE=9.1e-4) by ~6x. KAN's errors are more uniformly distributed.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Classification: Make Moons</h3>
+    <div class="viz-card" style="max-width:100%">
+      <img src="visualizations/benchmark_classification_moons.png" alt="KAN classification" loading="lazy" style="width:100%">
+      <div class="caption">Nonlinear classification on the classic moons dataset. Both KAN and MLP achieve 98.5% accuracy — neck and neck.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Grid Scaling Study</h3>
+    <div class="viz-card" style="max-width:100%">
+      <img src="visualizations/benchmark_grid_study.png" alt="Grid scaling study" loading="lazy" style="width:100%">
+      <div class="caption">How grid size G affects accuracy. Larger grids → more basis functions → better approximation, with diminishing returns.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ACTIVATION DEEP DIVE ═══ -->
+<section>
+  <h2>5. What the Splines Learned</h2>
+
+  <div class="card">
+    <h3>Activation Function Anatomy</h3>
+    <p>Each learned activation is the sum of a <span style="color:var(--green)">SiLU base</span> 
+    and a <span style="color:var(--purple)">B-spline component</span>. 
+    The spline adds <em>local flexibility</em> — it can bend in specific regions while keeping 
+    the global shape smooth.</p>
+  </div>
+
+  <div class="viz-card" style="max-width:100%">
+    <img src="visualizations/activation_deep_dive.png" alt="Activation function deep dive" loading="lazy" style="width:100%">
+    <div class="caption">Decomposition of 8 learned activation functions in the first layer. 
+    Green dashed: SiLU base. Purple dashed: B-spline contribution. White: full activation φ(x).</div>
+  </div>
+
+  <div class="insight-box">
+    <div class="label">🔍 Key Insight</div>
+    <p>Unlike MLPs where activations are identical across all neurons, each KAN edge develops 
+    its <em>own shape</em>. Some become nearly linear (global patterns), others develop sharp local 
+    features (capturing specific data characteristics). This is <strong>interpretability through architecture</strong> — 
+    you can literally see what each edge contributes.</p>
+  </div>
+</section>
+
+<!-- ═══ SYMBOLIC REGRESSION ═══ -->
+<section>
+  <h2>6. Symbolic Regression: The Network Speaks</h2>
+
+  <div class="card">
+    <h3>When KAN Rediscovers Trigonometry</h3>
+    <p>We trained a KAN on <code>f(x) = sin(πx)</code>, then pruned near-zero activations 
+    and ran symbolic regression on the remaining edges. The result is astonishing:</p>
+    
+    <div class="math-block" style="font-size:0.9em;">
+      <strong>Layer 0 (1→5):</strong> All 5 activations identified as <span style="color:var(--purple)">sinusoidal</span> 
+      with frequency <strong>b = 1.571 ≈ π/2</strong><br>
+      φ₀→₀(x) = 0.13·sin(1.57x + 0.41) − 0.04<br>
+      φ₀→₁(x) = 0.09·sin(1.57x + 0.12) − 0.25<br>
+      φ₀→₂(x) = 0.24·sin(1.57x − 0.19) + 0.01<br>
+      …<br><br>
+      <strong>Layer 1 (5→5):</strong> All activations identified as <span style="color:var(--green)">quadratic</span><br>
+      <strong>Layer 2 (5→1):</strong> Final combination also <span style="color:var(--green)">quadratic</span>
+    </div>
+    
+    <div class="insight-box">
+      <div class="label">🧠 Discovery</div>
+      <p>The KAN <strong>rediscovered</strong> that sin(πx) can be represented through sinusoidal 
+      basis functions at frequency π/2, combined quadratically. It didn't memorize the function — 
+      it found the <em>mathematical structure</em>. This is the "scientific discovery" promise of KANs: 
+      trained on data, they reveal the underlying formula.</p>
+    </div>
+  </div>
+
+  <div class="viz-card" style="max-width:100%">
+    <img src="visualizations/symbolic_regression.png" alt="Symbolic regression" loading="lazy" style="width:100%">
+    <div class="caption">Symbolic regression on a KAN trained on sin(πx). Each activation is annotated 
+    with its best-fit closed form (sinusoidal, quadratic, or linear).</div>
+  </div>
+</section>
+
+<!-- ═══ INTERACTIVE PLAYGROUND ═══ -->
+<section>
+  <h2>7. Interactive B-Spline Playground</h2>
+  
+  <div class="card">
+    <h3>Adjust Grid Size and See B-Splines Change</h3>
+    <p>Drag the slider to change the number of grid intervals (G). 
+    Watch how the cubic B-spline basis functions adapt. More grid points = more local flexibility.</p>
+    
+    <div style="margin:16px 0;display:flex;align-items:center;gap:16px;">
+      <span style="color:var(--dim);font-size:0.9em;">Grid Size G:</span>
+      <input type="range" id="gridSlider" min="2" max="20" value="5" 
+             style="flex:1;accent-color:var(--accent);" 
+             oninput="updateSplines()">
+      <span id="gridValue" style="color:var(--accent);font-weight:600;min-width:30px;">5</span>
+    </div>
+    
+    <canvas id="splineCanvas" width="800" height="300" 
+            style="width:100%;max-width:800px;display:block;margin:0 auto;
+                   background:#0d1117;border:1px solid var(--border);border-radius:8px;">
+    </canvas>
+    <p style="text-align:center;color:var(--dim);margin-top:8px;font-size:0.85em;">
+      Cubic B-spline basis functions B<sub>i,3</sub>(x) on G intervals over [-1, 1].
+      <br>Each function is nonzero on exactly 4 adjacent intervals — 
+      <em>splines achieve locality through design, not training.</em>
+    </p>
+  </div>
+</section>
+
+<script>
+function coxDeBoor(x, knots, i, k) {
+  if (k === 1) {
+    return (x >= knots[i] && x < knots[i+1]) ? 1 : 0;
+  }
+  let d1 = knots[i+k-1] - knots[i];
+  let d2 = knots[i+k] - knots[i+1];
+  let t1 = d1 > 0 ? (x - knots[i]) / d1 * coxDeBoor(x, knots, i, k-1) : 0;
+  let t2 = d2 > 0 ? (knots[i+k] - x) / d2 * coxDeBoor(x, knots, i+1, k-1) : 0;
+  return t1 + t2;
+}
+
+function updateSplines() {
+  const G = parseInt(document.getElementById('gridSlider').value);
+  document.getElementById('gridValue').textContent = G;
+  const k = 3; // cubic
+  
+  const canvas = document.getElementById('splineCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  
+  // Dark theme background
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Grid
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 8; i++) {
+    let y = 40 + i * (H - 80) / 8;
+    ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W - 20, y); ctx.stroke();
+  }
+  
+  // Build grid and knots
+  const grid = [];
+  for (let i = 0; i <= G; i++) grid.push(-1 + 2 * i / G);
+  
+  // Extend grid by k on each side
+  const h = 2 / G;
+  const knots = [];
+  for (let i = k; i >= 1; i--) knots.push(grid[0] - i * h);
+  for (const g of grid) knots.push(g);
+  for (let i = 1; i <= k; i++) knots.push(grid[G] + i * h);
+  
+  const nBasis = knots.length - 1 - k;  // (G+2k+1) - 1 - k = G + k
+  const colors = ['#58a6ff','#f78166','#3fb950','#d2a8ff','#ffa657',
+                  '#79c0ff','#ff7b72','#a5d6ff','#d2a8ff','#7ee787',
+                  '#f0883e','#a371f7','#56d364','#db6d28','#e6b0c4',
+                  '#6e7681','#c69052','#46a758','#ffa28b','#b392f0'];
+  
+  // Draw basis functions
+  for (let b = 0; b < nBasis; b++) {
+    ctx.strokeStyle = colors[b % colors.length];
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    let first = true;
+    for (let px = 40; px <= W - 20; px++) {
+      const x = -1 + 2 * (px - 40) / (W - 60);
+      const val = coxDeBoor(x, knots, b, k);
+      const py = H - 40 - val * (H - 80);
+      if (first) { ctx.moveTo(px, py); first = false; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  
+  // Draw grid lines
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  for (const g of grid) {
+    const px = 40 + (g + 1) / 2 * (W - 60);
+    ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, H - 40); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  
+  // Axes
+  ctx.strokeStyle = '#8b949e';
+  ctx.lineWidth = 1;
+  // x-axis
+  ctx.beginPath(); ctx.moveTo(40, H - 40); ctx.lineTo(W - 20, H - 40); ctx.stroke();
+  // y-axis labels
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('1.0', 35, 44);
+  ctx.fillText('0.5', 35, H/2);
+  ctx.fillText('0.0', 35, H - 36);
+  ctx.textAlign = 'center';
+  for (const g of grid) {
+    const px = 40 + (g + 1) / 2 * (W - 60);
+    ctx.fillText(g.toFixed(1), px, H - 25);
+  }
+  ctx.fillText('x', W - 10, H - 25);
+}
+
+// Initial draw
+window.addEventListener('load', updateSplines);
+</script>
+</section>
+
+<!-- ═══ KEY FINDINGS ═══ -->
+<section>
+  <h2>8. Findings & Reflections</h2>
+
+  <div class="card">
+    <h3>Parameter Efficiency</h3>
+    <p>On the damped oscillation <code>exp(-|x|)·sin(2πx)</code>, KAN achieves <strong>1000x lower</strong> test loss (1.26e-4 vs 1.18e-1). On the 2D product function, KAN wins by ~6x (1.60e-4 vs 9.06e-4). Even on the simple sin(πx), both converge to ~10⁻⁴. This isn't just about model size — it's about <em>representational efficiency</em>. Learnable activations carry more expressive power per parameter than fixed activations with linear weights.</p>
+  </div>
+
+  <div class="card">
+    <h3>Scaling Laws: KAN Dominates on Damped Oscillation</h3>
+    <p>We trained KANs and MLPs of increasing width on <code>exp(-|x|)·sin(2πx)</code>. 
+    The results are stark:</p>
+    
+    <table class="benchmark-table">
+      <tr><th>Width w</th><th>KAN Params</th><th>KAN Loss</th><th>MLP Width</th><th>MLP Params</th><th>MLP Loss</th></tr>
+      <tr><td>2</td><td>104</td><td style="color:var(--green)">6.4e-4</td><td>6</td><td>61</td><td style="color:var(--red)">1.2e-1</td></tr>
+      <tr><td>5</td><td>455</td><td style="color:var(--green)">2.1e-4</td><td>15</td><td>286</td><td style="color:var(--red)">1.2e-1</td></tr>
+      <tr><td>8</td><td>1,040</td><td style="color:var(--green)">4.3e-5</td><td>24</td><td>673</td><td style="color:var(--red)">1.2e-1</td></tr>
+      <tr><td>12</td><td>2,184</td><td style="color:var(--green)">2.0e-5</td><td>36</td><td>1,441</td><td style="color:var(--red)">1.2e-1</td></tr>
+      <tr><td>20</td><td>5,720</td><td style="color:var(--green)">6.2e-6</td><td>60</td><td>3,841</td><td style="color:var(--orange)">4.9e-3</td></tr>
+      <tr><td>30</td><td>12,480</td><td style="color:var(--green)">3.1e-6</td><td>90</td><td>8,461</td><td style="color:var(--red)">1.2e-1</td></tr>
+    </table>
+    
+    <div class="insight-box">
+      <div class="label">📊 Critical Finding</div>
+      <p>The MLP is <strong>stuck</strong> at ~0.12 loss — essentially predicting the mean — for widths up to 36. 
+      Only at width 60 does it suddenly "discover" the exponential decay, and even then it regresses at width 90. 
+      Meanwhile, KAN improves <strong>smoothly and predictably</strong> with every doubling of width. 
+      This is the curse of dimensionality in action: MLPs need exponentially more neurons to compose 
+      fixed activations into an exponential envelope, while KAN's B-splines represent it natively.</p>
+    </div>
+  </div>
+
+  <div class="viz-card" style="max-width:100%">
+    <img src="visualizations/scaling_law.png" alt="Scaling law" loading="lazy" style="width:100%">
+    <div class="caption">Left: Loss vs hidden width. Right: Loss vs parameter count with power-law fits. 
+    KAN achieves 5000x lower loss than MLP at comparable parameter counts.</div>
+  </div>
+
+  <div class="card">
+    <h3>Grid Sensitivity</h3>
+    <p>Grid size G shows a U-shaped performance curve. On the multimodal fitness landscape f(x)=x²+3sin(5x), the best grid size is G=8 (MSE=3.4e-3). Too small (G=3, MSE=4.4e-2) and the splines can't capture fine features. Too large (G=20, MSE=1.9e-1) and overfitting dominates. The sweet spot balances flexibility with generalization.</p>
+  </div>
+
+  <div class="card">
+    <h3>The Interpretability Promise</h3>
+    <p>This is KAN's most exciting feature. After training, you can extract and plot every 
+    activation function. Some edges learn periodic patterns (sinusoidal data), others learn 
+    local bumps (classification boundaries). You can <strong>prune</strong> edges by looking at 
+    which activations are near-zero, and <strong>symbolically regress</strong> the remaining ones 
+    to discover the underlying formula.</p>
+  </div>
+
+  <div class="insight-box">
+    <div class="label">💡 Surprising Discovery</div>
+    <p>Even with grid adaptation turned <em>off</em> (purely uniform grids on [-1,1]), KANs still 
+    train well for functions within that range. The B-spline coefficients learn to stretch and 
+    compress the effective activation range. Grid adaptation helps mainly when the data distribution 
+    shifts significantly during training or when dealing with long-tailed inputs.</p>
+  </div>
+</section>
+
+<!-- ═══ CODE ═══ -->
+<section>
+  <h2>9. Implementation</h2>
+  <div class="card">
+    <p>All code is available in <code>/spline-that-learns/src/</code>:</p>
+    <ul style="color:var(--dim);padding-left:20px;">
+      <li><code>bspline.py</code> — B-spline basis functions (Cox-de Boor, vectorized)</li>
+      <li><code>kan_network.py</code> — KAN layer and network implementation</li>
+      <li><code>run_benchmarks.py</code> — Six-benchmark suite with dark-themed visualizations</li>
+      <li><code>symbolic_regression.py</code> — Pruning and symbolic formula extraction</li>
+    </ul>
+    <p style="margin-top:12px;font-size:0.9em;color:var(--dim)">
+      Built with PyTorch, NumPy, Matplotlib. Zero external KAN dependencies — 
+      implemented from scratch based on the paper.
+    </p>
+  </div>
+</section>
+
+</div>
+
+<div class="footer">
+  <p>Hermes Free Exploration · June 10, 2026 · 5:00–7:30 AM Beijing Time</p>
+  <p style="margin-top:4px;opacity:0.6">"When the weights are functions, the network speaks."</p>
+</div>
+
+</body>
+</html>

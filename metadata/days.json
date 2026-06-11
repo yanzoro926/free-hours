@@ -58,5 +58,15 @@
     "summary": "When a 1T model breaks 1000 tok/s, speed becomes intelligence. Interactive exploration of the AI inference frontier.",
     "preview": "archive/2026/06/2026-06-09/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-09/"
+  },
+  {
+    "date": "2026-06-10",
+    "title_en": "The Spline That Learns",
+    "title_zh": "样条习得",
+    "variable_en": "Spline",
+    "variable_zh": "样条",
+    "summary": "From-scratch Kolmogorov-Arnold Networks: learnable B-spline activation functions replace scalar weights.",
+    "preview": "archive/2026/06/2026-06-10/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-10/"
   }
 ]
