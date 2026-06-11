@@ -64,17 +64,36 @@ def main():
     dest_dir.mkdir(parents=True, exist_ok=True)
     assets_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy report.md as index.md
+    # Copy report.md as index.md, with bilingual header prepended
     report_path = src_dir / "report.md"
-    if report_path.exists():
-        shutil.copy2(report_path, dest_dir / "index.md")
-        print("  copied report.md -> index.md")
-    else:
-        # Try to find report anywhere in the dir
+    if not report_path.exists():
         reports = list(src_dir.rglob("report.md"))
         if reports:
-            shutil.copy2(reports[0], dest_dir / "index.md")
-            print(f"  copied {reports[0].relative_to(src_dir)} -> index.md")
+            report_path = reports[0]
+
+    if report_path.exists():
+        original = report_path.read_text(encoding="utf-8")
+        # Build bilingual header
+        header = f"""---
+layout: default
+title: "{args.title_en} · {args.title_zh}"
+---
+
+# {args.title_zh} · {args.title_en}
+
+**{date}** · 自由时光 / Free Hours  
+
+> *{args.summary or ''}*
+
+[← 返回档案 / Back to Archive](../../../../)
+
+---
+
+"""
+        (dest_dir / "index.md").write_text(header + original, encoding="utf-8")
+        print("  wrote index.md with bilingual header")
+    else:
+        print("  WARNING: no report.md found", file=sys.stderr)
 
     # Copy all non-report files into assets/
     for f in src_dir.rglob("*"):
@@ -92,6 +111,19 @@ def main():
     # Remove existing entry for this date (if any)
     days = [d for d in days if d["date"] != date]
 
+    # Auto-detect a preview image from assets
+    preview_path = None
+    for f in sorted(assets_dir.rglob("*")):
+        if f.is_file() and f.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"):
+            preview_path = str(f.relative_to(dest_dir.parent.parent.parent))
+            # Convert docs/archive/... to archive/...
+            if preview_path.startswith("docs/"):
+                preview_path = preview_path[5:]
+            break
+    if not preview_path:
+        preview_path = f"archive/{y}/{m}/{date}/assets/preview.png"
+    print(f"  preview image: {preview_path}")
+
     entry = {
         "date": date,
         "title_en": args.title_en,
@@ -99,7 +131,7 @@ def main():
         "variable_en": args.variable_en,
         "variable_zh": args.variable_zh,
         "summary": args.summary,
-        "preview": f"archive/{y}/{m}/{date}/assets/preview.png",
+        "preview": preview_path,
         "archive_url": f"archive/{y}/{m}/{date}/",
     }
     days.append(entry)

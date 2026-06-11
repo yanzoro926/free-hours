@@ -6,7 +6,7 @@
     "variable_en": "Light",
     "variable_zh": "光",
     "summary": "Test run: cosmic web simulation, sky map visualization, and cellular-automaton galaxy patterns.",
-    "preview": "archive/2026/06/2026-06-01/assets/preview.png",
+    "preview": "archive/2026/06/2026-06-01/assets/speculative_decoding/benchmark_results.png",
     "archive_url": "archive/2026/06/2026-06-01/"
   },
   {
@@ -16,7 +16,7 @@
     "variable_en": "Sparks",
     "variable_zh": "星火",
     "summary": "A minimal GPT trained from scratch on Shakespeare, exploring what it takes to build language models from first principles.",
-    "preview": "archive/2026/06/2026-06-02/assets/preview.png",
+    "preview": "archive/2026/06/2026-06-02/assets/sparks-of-babel/preview.png",
     "archive_url": "archive/2026/06/2026-06-02/"
   },
   {
@@ -36,7 +36,7 @@
     "variable_en": "Curvature",
     "variable_zh": "曲率",
     "summary": "An interactive hyperbolic geometry explorer — Poincare disk canvas, tessellation, geodesics, and triangle defect measurement.",
-    "preview": "archive/2026/06/2026-06-07/assets/preview.png",
+    "preview": "archive/2026/06/2026-06-07/assets/hyperbolic-canvas/figures/circle_growth.png",
     "archive_url": "archive/2026/06/2026-06-07/"
   },
   {
@@ -56,7 +56,7 @@
     "variable_en": "UltraSpeed",
     "variable_zh": "极速",
     "summary": "When a 1T model breaks 1000 tok/s, speed becomes intelligence. Interactive exploration of the AI inference frontier.",
-    "preview": "archive/2026/06/2026-06-09/assets/preview.png",
+    "preview": "archive/2026/06/2026-06-09/assets/the-speed-frontier/charts/01_paths_vs_speed.svg",
     "archive_url": "archive/2026/06/2026-06-09/"
   },
   {
@@ -66,7 +66,7 @@
     "variable_en": "Spline",
     "variable_zh": "样条",
     "summary": "From-scratch Kolmogorov-Arnold Networks: learnable B-spline activation functions replace scalar weights.",
-    "preview": "archive/2026/06/2026-06-10/assets/preview.png",
+    "preview": "archive/2026/06/2026-06-10/assets/spline-that-learns/visualizations/activation_deep_dive.png",
     "archive_url": "archive/2026/06/2026-06-10/"
   },
   {
@@ -76,7 +76,7 @@
     "variable_en": "Pixel",
     "variable_zh": "像素",
     "summary": "A complete from-scratch 3D software renderer in pure Python: matrix pipeline, rasterizer, Gouraud shading, and ASCII terminal output.",
-    "preview": "archive/2026/06/2026-06-11/assets/preview.png",
+    "preview": "archive/2026/06/2026-06-11/assets/cathedral-of-pixels/output/geometry_study.png",
     "archive_url": "archive/2026/06/2026-06-11/"
   }
 ]
