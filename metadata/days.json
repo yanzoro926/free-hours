@@ -68,5 +68,15 @@
     "summary": "From-scratch Kolmogorov-Arnold Networks: learnable B-spline activation functions replace scalar weights.",
     "preview": "archive/2026/06/2026-06-10/assets/preview.png",
     "archive_url": "archive/2026/06/2026-06-10/"
+  },
+  {
+    "date": "2026-06-11",
+    "title_en": "Cathedral of Pixels",
+    "title_zh": "像素大教堂",
+    "variable_en": "Pixel",
+    "variable_zh": "像素",
+    "summary": "A complete from-scratch 3D software renderer in pure Python: matrix pipeline, rasterizer, Gouraud shading, and ASCII terminal output.",
+    "preview": "archive/2026/06/2026-06-11/assets/preview.png",
+    "archive_url": "archive/2026/06/2026-06-11/"
   }
 ]
