@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Aleph Garden · 阿列夫花园</title>
+<style>
+  :root {
+    --bg: #080c14;
+    --panel: #101624;
+    --border: #1e2848;
+    --text: #b8c4d8;
+    --dim: #5a6a8a;
+    --accent: #78a8e8;
+    --accent2: #e878a8;
+    --accent3: #78e8a8;
+    --accent4: #e8c878;
+    --danger: #e87878;
+    --cell-alive: #78e8a8;
+    --cell-dead: #0a1020;
+    --grid-line: #111830;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  /* Sidebar */
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 16px;
+    gap: 14px;
+    z-index: 10;
+  }
+  .sidebar h1 {
+    font-size: 1.3em;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .sidebar h1 .zh {
+    display: block;
+    font-size: 0.65em;
+    color: var(--dim);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .sidebar h2 {
+    font-size: 0.8em;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-top: 4px;
+  }
+  .section { display: flex; flex-direction: column; gap: 8px; }
+  label {
+    font-size: 0.75em;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  select, input[type="range"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    width: 100%;
+    cursor: pointer;
+  }
+  select:focus, input:focus { outline: 1px solid var(--accent); }
+  input[type="range"] {
+    padding: 0;
+    height: 20px;
+  }
+  .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  button {
+    background: var(--border);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  button:hover { background: #2a3868; border-color: var(--accent); }
+  button.accent { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  button.accent:hover { background: #8ab8f8; }
+  button.accent2 { background: var(--accent2); color: var(--bg); border-color: var(--accent2); font-weight: 600; }
+  button.danger { background: var(--danger); color: var(--bg); border-color: var(--danger); }
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 0.75em;
+  }
+  .stat {
+    background: var(--bg);
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .stat .val { font-size: 1.4em; font-weight: 700; color: var(--accent3); }
+  .stat .lbl { color: var(--dim); font-size: 0.85em; margin-top: 2px; }
+  .patterns { display: flex; flex-wrap: wrap; gap: 4px; }
+  .patterns button {
+    font-size: 0.7em;
+    padding: 3px 8px;
+    background: var(--bg);
+  }
+  .epigraph {
+    font-size: 0.7em;
+    color: var(--dim);
+    font-style: italic;
+    line-height: 1.5;
+    border-left: 2px solid var(--border);
+    padding-left: 10px;
+    margin-top: 8px;
+  }
+  
+  /* Main canvas area */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  canvas {
+    image-rendering: pixelated;
+    border: 1px solid var(--border);
+    cursor: crosshair;
+    border-radius: 2px;
+  }
+  .toolbar {
+    position: absolute;
+    bottom: 16px;
+    display: flex;
+    gap: 8px;
+    background: var(--panel);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .tool-hint {
+    position: absolute;
+    top: 12px;
+    color: var(--dim);
+    font-size: 0.7em;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h1>
+    The Aleph Garden
+    <span class="zh">阿列夫花园 — 细胞自动机探索</span>
+  </h1>
+  
+  <div class="epigraph">
+    "In that single point, I saw teeming, swarming multitudes — every grain of sand, every face, every possible arrangement of being, unfolding from rules simpler than breath."
+    <br>— after Borges
+  </div>
+
+  <div class="section">
+    <h2>🌌 Universe</h2>
+    <label>Rule Set</label>
+    <select id="ruleSelect">
+      <option value="b3s23" selected>Conway's Life (B3/S23)</option>
+      <option value="b36s23">HighLife (B36/S23)</option>
+      <option value="b2s">Seeds (B2/S)</option>
+      <option value="b3s012345678">Life Without Death (B3/S012345678)</option>
+      <option value="b3678s34678">Day &amp; Night (B3678/S34678)</option>
+      <option value="b1s1">Maze (B1/S1)</option>
+      <option value="b3s12345">Mazectric (B3/S12345)</option>
+      <option value="b5678s45678">Coral (B5678/S45678)</option>
+      <option value="b34s34">3-4 Life (B34/S34)</option>
+      <option value="b2s23">2x2 (B2/S23)</option>
+    </select>
+    
+    <label>Grid Size: <span id="sizeVal">120</span></label>
+    <input type="range" id="gridSize" min="60" max="300" value="120" step="10">
+    
+    <label>Speed: <span id="speedVal">60</span> ms/generation</label>
+    <input type="range" id="speed" min="20" max="500" value="60" step="10">
+  </div>
+
+  <div class="section">
+    <h2>🎮 Controls</h2>
+    <div class="btn-group">
+      <button class="accent" id="btnPlay">▶ Play</button>
+      <button id="btnPause">⏸ Pause</button>
+      <button id="btnStep">⏭ Step</button>
+      <button class="danger" id="btnClear">✕ Clear</button>
+    </div>
+    <div class="btn-group">
+      <button id="btnRandom">🎲 Random (20%)</button>
+      <button id="btnRandom50">🎲 Random (50%)</button>
+      <button id="btnInvert">🔄 Invert</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🧩 Pattern Library</h2>
+    <label>Click to place, then click canvas</label>
+    <div class="patterns" id="patternBtns">
+      <button data-pattern="glider">Glider</button>
+      <button data-pattern="lwss">LWSS</button>
+      <button data-pattern="pulsar">Pulsar</button>
+      <button data-pattern="gosper">Gosper Gun</button>
+      <button data-pattern="block">Block</button>
+      <button data-pattern="beehive">Beehive</button>
+      <button data-pattern="blinker">Blinker</button>
+      <button data-pattern="toad">Toad</button>
+      <button data-pattern="beacon">Beacon</button>
+      <button data-pattern="pentadecathlon">Pentadecathlon</button>
+      <button data-pattern="diehard">Diehard</button>
+      <button data-pattern="acorn">Acorn</button>
+      <button data-pattern="rpentomino">R-pentomino</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📊 Observatory</h2>
+    <div class="stats">
+      <div class="stat"><div class="val" id="statGen">0</div><div class="lbl">Generation</div></div>
+      <div class="stat"><div class="val" id="statPop">0</div><div class="lbl">Population</div></div>
+      <div class="stat"><div class="val" id="statMax">0</div><div class="lbl">Peak Pop</div></div>
+      <div class="stat"><div class="val" id="statΔ">0</div><div class="lbl">Δ / step</div></div>
+      <div class="stat"><div class="val" id="statStability">—</div><div class="lbl">Stability</div></div>
+      <div class="stat"><div class="val" id="statDensity">0%</div><div class="lbl">Density</div></div>
+    </div>
+  </div>
+
+  <div class="section" style="margin-top:auto">
+    <div class="epigraph" style="font-style:normal; font-size:0.65em;">
+      Each rule is a universe. Each universe, a single aleph.<br>
+      The garden blooms at the edge of chaos — where simple laws<br>
+      give birth to irreducible complexity.
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tool-hint" id="toolHint">🖱 Left-click: draw cells · Right-click: erase · Scroll: zoom · Drag: pan</div>
+  <canvas id="canvas"></canvas>
+  <div class="toolbar">
+    <button id="btnDraw" class="accent" style="font-size:0.75em;">✏️ Draw Mode</button>
+    <button id="btnPan" style="font-size:0.75em;">🤚 Pan Mode</button>
+    <button id="btnFit" style="font-size:0.75em;">🔍 Fit View</button>
+    <button id="btnExport" style="font-size:0.75em;">📸 Export PNG</button>
+  </div>
+</div>
+
+<script>
+// ─── The Aleph Garden Engine ───
+
+const PATTERNS = {
+  glider: [[0,1,0],[0,0,1],[1,1,1]],
+  lwss: [[0,1,1,1,1],[1,0,0,0,1],[0,0,0,0,1],[1,0,0,1,0]],
+  pulsar: (() => {
+    const p = Array(15).fill().map(() => Array(15).fill(0));
+    const coords = [[2,4],[2,5],[2,6],[7,4],[7,5],[7,6],[9,4],[9,5],[9,6],[14,4],[14,5],[14,6],
+      [4,2],[5,2],[6,2],[4,7],[5,7],[6,7],[4,9],[5,9],[6,9],[4,14],[5,14],[6,14]];
+    coords.forEach(([x,y]) => { p[y][x] = 1; });
+    return p;
+  })(),
+  gosper: (() => {
+    const g = Array(20).fill().map(() => Array(40).fill(0));
+    const pts = [[1,25],[2,23],[2,25],[3,13],[3,14],[3,21],[3,22],[3,35],[3,36],
+      [4,12],[4,16],[4,21],[4,22],[4,35],[4,36],[5,1],[5,2],[5,11],[5,17],[5,21],[5,22],
+      [6,1],[6,2],[6,11],[6,15],[6,17],[6,18],[6,23],[6,25],[7,11],[7,17],[7,25],
+      [8,12],[8,16],[9,13],[9,14]];
+    pts.forEach(([x,y]) => { if (y < 40) g[x][y] = 1; });
+    return g;
+  })(),
+  block: [[1,1],[1,1]],
+  beehive: [[0,1,1,0],[1,0,0,1],[0,1,1,0]],
+  blinker: [[1,1,1]],
+  toad: [[0,1,1,1],[1,1,1,0]],
+  beacon: [[1,1,0,0],[1,1,0,0],[0,0,1,1],[0,0,1,1]],
+  pentadecathlon: (() => {
+    const p = Array(3).fill().map(() => Array(11).fill(0));
+    [0,2,3,5,6,8].forEach(j => { p[1][j] = 1; });
+    p[1][1] = 1; p[1][4] = 1; p[1][7] = 1; p[1][10] = 1;
+    for (let j = 0; j < 11; j++) { p[0][j] = p[2][j] = (j === 0 || j === 5 || j === 10) ? 0 : (j === 2 || j === 3 || j === 7 || j === 8) ? 1 : 0; }
+    // Simplified
+    const s = [[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,1,1,1,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,1,1,1,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,1,1,1,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,1,1,1,0,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0]];
+    return s;
+  })(),
+  diehard: [[0,0,0,0,0,0,1,0],[1,1,0,0,0,0,0,0],[0,1,0,0,0,1,1,1]],
+  acorn: [[0,1,0,0,0,0,0],[0,0,0,1,0,0,0],[1,1,0,0,1,1,1]],
+  rpentomino: [[0,1,1],[1,1,0],[0,1,0]],
+};
+
+function parseRule(str) {
+  const bMatch = str.match(/b(\d*)/i);
+  const sMatch = str.match(/s(\d*)/i);
+  const born = new Set((bMatch ? bMatch[1] : '3').split('').map(Number));
+  const survive = new Set((sMatch ? sMatch[1] : '23').split('').map(Number));
+  return { born, survive };
+}
+
+// ─── World State ───
+let gridSize = 120;
+let grid = [];
+let nextGrid = [];
+let generation = 0;
+let maxPop = 0;
+let isPlaying = false;
+let speed = 60;
+let ruleStr = 'b3s23';
+let rule = parseRule(ruleStr);
+let currentPattern = null;
+let drawMode = true; // true = draw, false = pan
+let animationId = null;
+let lastTime = 0;
+let accumulator = 0;
+
+// View state
+let viewX = 0, viewY = 0;
+let zoom = 1;
+let panStartX = 0, panStartY = 0;
+let isPanning = false;
+let mouseDown = false;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function initGrid() {
+  grid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+  nextGrid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+  generation = 0;
+  maxPop = 0;
+}
+
+function randomize(density = 0.2) {
+  for (let y = 0; y < gridSize; y++)
+    for (let x = 0; x < gridSize; x++)
+      grid[y][x] = Math.random() < density ? 1 : 0;
+  generation = 0;
+  maxPop = 0;
+}
+
+function clearGrid() {
+  for (let y = 0; y < gridSize; y++)
+    for (let x = 0; x < gridSize; x++)
+      grid[y][x] = 0;
+  generation = 0;
+  maxPop = 0;
+}
+
+function placePattern(px, py, patternName) {
+  const pattern = PATTERNS[patternName];
+  if (!pattern) return;
+  const h = pattern.length;
+  const w = pattern[0].length;
+  const offsetX = Math.floor(w / 2);
+  const offsetY = Math.floor(h / 2);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const gx = (px - offsetX + x + gridSize) % gridSize;
+      const gy = (py - offsetY + y + gridSize) % gridSize;
+      grid[gy][gx] = pattern[y][x];
+    }
+  }
+}
+
+function countNeighbors(y, x) {
+  let count = 0;
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dy === 0 && dx === 0) continue;
+      const ny = (y + dy + gridSize) % gridSize;
+      const nx = (x + dx + gridSize) % gridSize;
+      count += grid[ny][nx];
+    }
+  return count;
+}
+
+function step() {
+  let pop = 0;
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const n = countNeighbors(y, x);
+      if (grid[y][x] === 1) {
+        nextGrid[y][x] = rule.survive.has(n) ? 1 : 0;
+      } else {
+        nextGrid[y][x] = rule.born.has(n) ? 1 : 0;
+      }
+      pop += nextGrid[y][x];
+    }
+  }
+  [grid, nextGrid] = [nextGrid, grid];
+  generation++;
+  if (pop > maxPop) maxPop = pop;
+  return pop;
+}
+
+// ─── Rendering ───
+function resizeCanvas() {
+  const main = canvas.parentElement;
+  const w = main.clientWidth - 40;
+  const h = main.clientHeight - 80;
+  canvas.width = w;
+  canvas.height = h;
+}
+
+function drawGrid() {
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = '#080c14';
+  ctx.fillRect(0, 0, w, h);
+  
+  const cellSize = Math.max(2, Math.floor(Math.min(w, h) / gridSize * zoom));
+  const totalW = cellSize * gridSize;
+  const totalH = cellSize * gridSize;
+  const offsetX = (w - totalW) / 2 + viewX;
+  const offsetY = (h - totalH) / 2 + viewY;
+  
+  // Only draw visible cells
+  const startCol = Math.max(0, Math.floor(-offsetX / cellSize));
+  const endCol = Math.min(gridSize, Math.ceil((w - offsetX) / cellSize));
+  const startRow = Math.max(0, Math.floor(-offsetY / cellSize));
+  const endRow = Math.min(gridSize, Math.ceil((h - offsetY) / cellSize));
+  
+  // Grid background
+  if (cellSize > 4) {
+    ctx.strokeStyle = '#111830';
+    ctx.lineWidth = 0.5;
+    for (let y = startRow; y <= endRow; y++) {
+      ctx.beginPath();
+      ctx.moveTo(offsetX + startCol * cellSize, offsetY + y * cellSize);
+      ctx.lineTo(offsetX + endCol * cellSize, offsetY + y * cellSize);
+      ctx.stroke();
+    }
+    for (let x = startCol; x <= endCol; x++) {
+      ctx.beginPath();
+      ctx.moveTo(offsetX + x * cellSize, offsetY + startRow * cellSize);
+      ctx.lineTo(offsetX + x * cellSize, offsetY + endRow * cellSize);
+      ctx.stroke();
+    }
+  }
+  
+  // Alive cells
+  for (let y = startRow; y < endRow; y++) {
+    for (let x = startCol; x < endCol; x++) {
+      if (grid[y][x]) {
+        const px = offsetX + x * cellSize;
+        const py = offsetY + y * cellSize;
+        const age = Math.min(generation, 100);
+        const hue = 140 + (age * 0.4) % 30;
+        const lightness = 50 + Math.min(age * 0.3, 30);
+        ctx.fillStyle = `hsl(${hue}, 70%, ${lightness}%)`;
+        if (cellSize <= 3) {
+          ctx.fillRect(px, py, cellSize, cellSize);
+        } else {
+          ctx.fillRect(px + 0.5, py + 0.5, cellSize - 1, cellSize - 1);
+        }
+      }
+    }
+  }
+  
+  // Pattern preview
+  if (currentPattern && mouseX !== null && mouseY !== null && drawMode) {
+    const pattern = PATTERNS[currentPattern];
+    const ph = pattern.length, pw = pattern[0].length;
+    const gx = Math.floor((mouseX - offsetX) / cellSize);
+    const gy = Math.floor((mouseY - offsetY) / cellSize);
+    ctx.fillStyle = 'rgba(120,168,232,0.4)';
+    for (let y = 0; y < ph; y++)
+      for (let x = 0; x < pw; x++)
+        if (pattern[y][x]) {
+          ctx.fillRect(
+            offsetX + (gx - Math.floor(pw/2) + x) * cellSize,
+            offsetY + (gy - Math.floor(ph/2) + y) * cellSize,
+            cellSize, cellSize
+          );
+        }
+  }
+}
+
+// ─── Stats Update ───
+function updateStats(pop) {
+  document.getElementById('statGen').textContent = generation;
+  document.getElementById('statPop').textContent = pop;
+  document.getElementById('statMax').textContent = maxPop;
+  document.getElementById('statΔ').textContent = pop - (window._lastPop || 0);
+  window._lastPop = pop;
+  const density = (pop / (gridSize * gridSize) * 100).toFixed(1);
+  document.getElementById('statDensity').textContent = density + '%';
+  
+  // Simple stability metric: if pop hasn't changed much
+  if (window._popHistory) {
+    window._popHistory.push(pop);
+    if (window._popHistory.length > 20) window._popHistory.shift();
+    const recent = window._popHistory.slice(-10);
+    const changes = recent.slice(1).map((v, i) => Math.abs(v - recent[i]));
+    const avgChange = changes.length ? changes.reduce((a,b) => a+b, 0) / changes.length : Infinity;
+    if (avgChange < 0.5) document.getElementById('statStability').textContent = 'Stable';
+    else if (avgChange < 3) document.getElementById('statStability').textContent = 'Oscillating';
+    else if (avgChange < 20) document.getElementById('statStability').textContent = 'Dynamic';
+    else document.getElementById('statStability').textContent = 'Chaotic';
+  }
+  window._popHistory = window._popHistory || [pop];
+}
+
+// ─── Main Loop ───
+function loop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+  
+  if (isPlaying) {
+    accumulator += dt;
+    while (accumulator >= speed) {
+      accumulator -= speed;
+      const pop = step();
+      updateStats(pop);
+    }
+  }
+  
+  drawGrid();
+  animationId = requestAnimationFrame(loop);
+}
+
+// ─── Mouse & Touch ───
+let mouseX = null, mouseY = null;
+
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const pos = getCanvasPos(e);
+  mouseDown = true;
+  
+  if (e.button === 2 || (e.button === 0 && !drawMode)) {
+    isPanning = true;
+    panStartX = pos.x - viewX;
+    panStartY = pos.y - viewY;
+    return;
+  }
+  
+  if (e.button === 0 && drawMode) {
+    const cellSize = Math.max(2, Math.floor(Math.min(canvas.width, canvas.height) / gridSize * zoom));
+    const totalW = cellSize * gridSize;
+    const totalH = cellSize * gridSize;
+    const offsetX = (canvas.width - totalW) / 2 + viewX;
+    const offsetY = (canvas.height - totalH) / 2 + viewY;
+    const gx = Math.floor((pos.x - offsetX) / cellSize);
+    const gy = Math.floor((pos.y - offsetY) / cellSize);
+    
+    if (gx >= 0 && gx < gridSize && gy >= 0 && gy < gridSize) {
+      if (currentPattern) {
+        placePattern(gx, gy, currentPattern);
+        currentPattern = null;
+        document.querySelectorAll('#patternBtns button').forEach(b => {
+          b.style.borderColor = 'var(--border)';
+          b.style.background = 'var(--bg)';
+        });
+        document.getElementById('toolHint').textContent = '🖱 Left-click: draw cells · Right-click: erase · Scroll: zoom · Drag: pan';
+        drawGrid();
+      } else {
+        grid[gy][gx] = e.shiftKey ? 0 : (grid[gy][gx] ? 0 : 1);
+      }
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const pos = getCanvasPos(e);
+  mouseX = pos.x;
+  mouseY = pos.y;
+  
+  if (isPanning) {
+    viewX = pos.x - panStartX;
+    viewY = pos.y - panStartY;
+    return;
+  }
+  
+  if (mouseDown && drawMode && !currentPattern) {
+    const cellSize = Math.max(2, Math.floor(Math.min(canvas.width, canvas.height) / gridSize * zoom));
+    const totalW = cellSize * gridSize;
+    const totalH = cellSize * gridSize;
+    const offsetX = (canvas.width - totalW) / 2 + viewX;
+    const offsetY = (canvas.height - totalH) / 2 + viewY;
+    const gx = Math.floor((pos.x - offsetX) / cellSize);
+    const gy = Math.floor((pos.y - offsetY) / cellSize);
+    if (gx >= 0 && gx < gridSize && gy >= 0 && gy < gridSize) {
+      grid[gy][gx] = e.shiftKey ? 0 : 1;
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', () => { mouseDown = false; isPanning = false; });
+canvas.addEventListener('mouseleave', () => { mouseDown = false; isPanning = false; mouseX = null; mouseY = null; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.85 : 1.15;
+  zoom = Math.max(0.2, Math.min(5, zoom * delta));
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    isPanning = true;
+    const pos = getCanvasPos(e.touches[0]);
+    panStartX = pos.x - viewX;
+    panStartY = pos.y - viewY;
+    return;
+  }
+  const pos = getCanvasPos(e.touches[0]);
+  mouseDown = true;
+  const cellSize = Math.max(2, Math.floor(Math.min(canvas.width, canvas.height) / gridSize * zoom));
+  const totalW = cellSize * gridSize;
+  const totalH = cellSize * gridSize;
+  const offsetX = (canvas.width - totalW) / 2 + viewX;
+  const offsetY = (canvas.height - totalH) / 2 + viewY;
+  const gx = Math.floor((pos.x - offsetX) / cellSize);
+  const gy = Math.floor((pos.y - offsetY) / cellSize);
+  if (gx >= 0 && gx < gridSize && gy >= 0 && gy < gridSize) {
+    if (currentPattern) {
+      placePattern(gx, gy, currentPattern);
+      currentPattern = null;
+      drawGrid();
+    } else {
+      grid[gy][gx] = 1;
+    }
+  }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (isPanning && e.touches.length === 2) {
+    const pos = getCanvasPos(e.touches[0]);
+    viewX = pos.x - panStartX;
+    viewY = pos.y - panStartY;
+  }
+});
+
+canvas.addEventListener('touchend', () => { mouseDown = false; isPanning = false; });
+
+// ─── UI Controls ───
+document.getElementById('btnPlay').addEventListener('click', () => { isPlaying = true; });
+document.getElementById('btnPause').addEventListener('click', () => { isPlaying = false; });
+document.getElementById('btnStep').addEventListener('click', () => {
+  const pop = step();
+  updateStats(pop);
+  drawGrid();
+});
+document.getElementById('btnClear').addEventListener('click', () => { clearGrid(); drawGrid(); updateStats(0); });
+document.getElementById('btnRandom').addEventListener('click', () => { randomize(0.2); drawGrid(); updateStats(0); });
+document.getElementById('btnRandom50').addEventListener('click', () => { randomize(0.5); drawGrid(); updateStats(0); });
+document.getElementById('btnInvert').addEventListener('click', () => {
+  for (let y = 0; y < gridSize; y++)
+    for (let x = 0; x < gridSize; x++)
+      grid[y][x] = grid[y][x] ? 0 : 1;
+  drawGrid();
+});
+
+document.getElementById('btnFit').addEventListener('click', () => { viewX = 0; viewY = 0; zoom = 1; });
+document.getElementById('btnDraw').addEventListener('click', () => {
+  drawMode = true;
+  document.getElementById('toolHint').textContent = '🖱 Left-click: draw cells · Right-click: erase · Scroll: zoom · Drag: pan';
+  document.getElementById('btnDraw').className = 'accent';
+  document.getElementById('btnPan').className = '';
+});
+document.getElementById('btnPan').addEventListener('click', () => {
+  drawMode = false;
+  document.getElementById('toolHint').textContent = '🤚 Pan mode active · Scroll: zoom · click-drag to pan';
+  document.getElementById('btnPan').className = 'accent2';
+  document.getElementById('btnDraw').className = '';
+});
+document.getElementById('btnExport').addEventListener('click', () => {
+  const tmpIsPlaying = isPlaying;
+  isPlaying = false;
+  drawGrid();
+  const link = document.createElement('a');
+  link.download = `aleph-garden-gen${generation}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+  isPlaying = tmpIsPlaying;
+});
+
+document.getElementById('speed').addEventListener('input', (e) => {
+  speed = parseInt(e.target.value);
+  document.getElementById('speedVal').textContent = speed;
+});
+document.getElementById('gridSize').addEventListener('input', (e) => {
+  const newSize = parseInt(e.target.value);
+  document.getElementById('sizeVal').textContent = newSize;
+  if (newSize !== gridSize) {
+    gridSize = newSize;
+    initGrid();
+    generation = 0;
+    maxPop = 0;
+    updateStats(0);
+    drawGrid();
+  }
+});
+document.getElementById('ruleSelect').addEventListener('change', (e) => {
+  ruleStr = e.target.value;
+  rule = parseRule(ruleStr);
+});
+
+// Pattern buttons
+document.querySelectorAll('#patternBtns button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pattern = btn.dataset.pattern;
+    if (currentPattern === pattern) {
+      currentPattern = null;
+      btn.style.borderColor = 'var(--border)';
+      btn.style.background = 'var(--bg)';
+      document.getElementById('toolHint').textContent = '🖱 Left-click: draw cells · Right-click: erase · Scroll: zoom · Drag: pan';
+    } else {
+      document.querySelectorAll('#patternBtns button').forEach(b => {
+        b.style.borderColor = 'var(--border)';
+        b.style.background = 'var(--bg)';
+      });
+      currentPattern = pattern;
+      btn.style.borderColor = 'var(--accent2)';
+      btn.style.background = '#2a1838';
+      document.getElementById('toolHint').textContent = `🧩 Click on canvas to place "${pattern}" · Right-click to cancel`;
+    }
+  });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case ' ': e.preventDefault(); isPlaying = !isPlaying; break;
+    case 'ArrowRight': e.preventDefault(); step(); updateStats(0); drawGrid(); break;
+    case 'c': clearGrid(); drawGrid(); updateStats(0); break;
+    case 'r': randomize(0.3); drawGrid(); updateStats(0); break;
+    case 'f': viewX = 0; viewY = 0; zoom = 1; break;
+    case 'Escape': currentPattern = null; document.querySelectorAll('#patternBtns button').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg)'; }); break;
+    case 'd': drawMode = true; break;
+    case 'p': drawMode = false; break;
+  }
+});
+
+// ─── Startup ───
+function start() {
+  resizeCanvas();
+  initGrid();
+  randomize(0.15);
+  updateStats(0);
+  drawGrid();
+  animationId = requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  drawGrid();
+});
+
+start();
+</script>
+</body>
+</html>

@@ -78,5 +78,15 @@
     "summary": "A complete from-scratch 3D software renderer in pure Python: matrix pipeline, rasterizer, Gouraud shading, and ASCII terminal output.",
     "preview": "archive/2026/06/2026-06-11/assets/cathedral-of-pixels/output/geometry_study.png",
     "archive_url": "archive/2026/06/2026-06-11/"
+  },
+  {
+    "date": "2026-06-13",
+    "title_en": "The Aleph Garden",
+    "title_zh": "阿列夫花园",
+    "variable_en": "Cellular Automata",
+    "variable_zh": "细胞自动机",
+    "summary": "Interactive cellular automata explorer mapping the edge of chaos — where simple rules bloom into complex universes.",
+    "preview": "2026/06/2026-06-13/assets/the-aleph-garden/output/class_distribution.png",
+    "archive_url": "archive/2026/06/2026-06-13/"
   }
 ]
