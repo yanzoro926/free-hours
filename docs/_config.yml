@@ -1,1 +1,4 @@
----\ninclude:\n  - "*.md"\n  - "*.html"\nmarkdown: kramdown\n
+include:
+  - "*.md"
+  - "*.html"
+markdown: kramdown
